@@ -37,7 +37,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 # =========================
 # НАСТРОЙКИ
 # =========================
-TOKEN = "YOUR_BOT_TOKEN_HERE"
+TOKEN = os.getenv("TOKEN")
 
 # Список доступных скриптов
 # key = callback data
