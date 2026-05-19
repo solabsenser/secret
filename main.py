@@ -498,8 +498,16 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
         text = stdout if stdout else "✅ Скрипт завершён."
 
+        # Ограничиваем длину ошибок
         if stderr:
-            text += f"\n\n⚠️ {stderr}"
+
+            short_error = stderr[:3500]
+
+            text += f"\n\n⚠️ {short_error}"
+
+    # Если ошибка была длинной
+            if len(stderr) > 3500:
+                text += "\n\n... error truncated ..."
 
         await callback.message.answer(text)
 
