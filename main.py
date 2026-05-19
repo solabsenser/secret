@@ -14,6 +14,7 @@
 # scripts/
 #   TeleSession.py
 #   another_script.py
+# state appear
 
 import asyncio
 import subprocess
