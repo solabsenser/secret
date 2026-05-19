@@ -556,6 +556,9 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
     if data.get("choice"):
         inputs.append(data["choice"])
 
+    if data.get("reason"):
+        inputs.append(data["reason"])
+
     if data.get("username"):
         inputs.append(data["username"])
 
@@ -567,9 +570,6 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
     if data.get("violation"):
         inputs.append(data["violation"])
-
-    if data.get("reason"):
-        inputs.append(data["reason"])
 
     await callback.message.edit_text(
         f"⏳ Скрипт запущен.\n"
