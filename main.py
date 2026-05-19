@@ -67,6 +67,7 @@ SCRIPTS = {
         "needs_id": True,
         "needs_chat": True,
         "needs_violation": True,
+        "needs_reason": True,
 
         # Время работы
         "timeout": 60,
@@ -96,6 +97,7 @@ class RunScriptState(StatesGroup):
     waiting_id = State()
     waiting_chat = State()
     waiting_violation = State()
+    waiting_reason = State()
 
 # =========================
 # KEYBOARDS
@@ -132,7 +134,24 @@ def confirm_keyboard():
         ]
     )
 
-
+def reason_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="📨 Спам", callback_data="reason_1"),
+                InlineKeyboardButton(text="🕵️ Доксинг", callback_data="reason_2"),
+            ],
+            [
+                InlineKeyboardButton(text="🤬 Оскорбления", callback_data="reason_3"),
+                InlineKeyboardButton(text="💊 Наркота", callback_data="reason_4"),
+            ],
+            [
+                InlineKeyboardButton(text="🔞 Порно", callback_data="reason_12"),
+                InlineKeyboardButton(text="☠️ Терроризм", callback_data="reason_15"),
+            ]
+        ]
+    )
+    
 # =========================
 # HELPERS
 # =========================
@@ -460,12 +479,47 @@ async def chat_input(message: Message, state: FSMContext):
 
 @dp.message(RunScriptState.waiting_violation)
 async def violation_input(message: Message, state: FSMContext):
+
     await state.update_data(violation=message.text)
 
-    await message.answer(
-        "✅ Все данные получены.",
-        reply_markup=confirm_keyboard(),
+    data = await state.get_data()
+    script = SCRIPTS[data["script_key"]]
+
+    # Если нужен reason
+    if script.get("needs_reason"):
+
+        await state.set_state(RunScriptState.waiting_reason)
+
+        await message.answer(
+            "⚠️ Выберите причину:",
+            reply_markup=reason_keyboard()
+        )
+
+    else:
+
+        await message.answer(
+            "✅ Все данные получены.",
+            reply_markup=confirm_keyboard(),
+        )
+
+@dp.callback_query(F.data.startswith("reason_"))
+async def reason_selected(callback: CallbackQuery, state: FSMContext):
+
+    reason = callback.data.replace("reason_", "")
+
+    # Сохраняем номер причины
+    await state.update_data(reason=reason)
+
+    await callback.message.edit_text(
+        "✅ Причина выбрана."
     )
+
+    await callback.message.answer(
+        "🚀 Всё готово к запуску.",
+        reply_markup=confirm_keyboard()
+    )
+
+    await callback.answer()
     
 # =========================
 # RUN SCRIPT
@@ -513,6 +567,9 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
     if data.get("violation"):
         inputs.append(data["violation"])
+
+    if data.get("reason"):
+        inputs.append(data["reason"])
 
     await callback.message.edit_text(
         f"⏳ Скрипт запущен.\n"
