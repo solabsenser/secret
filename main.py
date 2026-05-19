@@ -141,6 +141,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
     from pathlib import Path
     import subprocess
     import sys
+    import re
 
     path = Path(script_path)
 
@@ -170,19 +171,50 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             timeout=timeout
         )
 
-        # Если stderr не пустой
+        # =========================
+        # ОЧИСТКА ANSI / ASCII МУСОРА
+        # =========================
+
+        # ANSI escape
+        ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
+
+        stdout = ansi_escape.sub('', stdout)
+        stderr = ansi_escape.sub('', stderr)
+
+        # RGB мусор
+        stdout = re.sub(r'\[38;2;.*?m', '', stdout)
+        stderr = re.sub(r'\[38;2;.*?m', '', stderr)
+
+        # Удаляем огромные ascii-art строки
+        cleaned_lines = []
+
+        for line in stdout.splitlines():
+
+            # Пропуск слишком длинных строк
+            if len(line) > 300:
+                continue
+
+            cleaned_lines.append(line)
+
+        stdout = "\n".join(cleaned_lines)
+
+        # =========================
+        # ОШИБКА
+        # =========================
         if stderr:
 
             return (
                 "❌ Скрипт завершился с ошибкой.",
-                stderr,
+                stderr[:3000],
                 process
             )
 
-        # Если всё прошло нормально
+        # =========================
+        # УСПЕХ
+        # =========================
         return (
             "✅ Скрипт успешно выполнился.",
-            stdout,
+            stdout[:3000],
             process
         )
 
