@@ -279,7 +279,8 @@ async def script_selected(callback: CallbackQuery, state: FSMContext):
         await state.set_state(RunScriptState.waiting_choice)
 
         await callback.message.edit_text(
-            f"📋 Выбран: {script['name']}\nВведите пункт меню:"
+            "📋 Выберите раздел:",
+            reply_markup=menu_keyboard()
         )
 
     else:
@@ -344,12 +345,34 @@ async def phone_input(message: Message, state: FSMContext):
         reply_markup=confirm_keyboard(),
     )
 
-@dp.message(RunScriptState.waiting_choice)
-async def choice_input(message: Message, state: FSMContext):
-    await state.update_data(choice=message.text)
+def menu_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="👤 Аккаунты", callback_data="menu_1"),
+                InlineKeyboardButton(text="📢 Каналы", callback_data="menu_2"),
+            ],
+            [
+                InlineKeyboardButton(text="🤖 Боты", callback_data="menu_3"),
+                InlineKeyboardButton(text="💬 Чаты", callback_data="menu_4"),
+            ]
+        ]
+    )
+
+
+@dp.callback_query(F.data.startswith("menu_"))
+async def menu_selected(callback: CallbackQuery, state: FSMContext):
+    choice = callback.data.replace("menu_", "")
+
+    await state.update_data(choice=choice)
 
     await state.set_state(RunScriptState.waiting_username)
-    await message.answer("👤 Введите username:")
+
+    await callback.message.edit_text(
+        f"✅ Выбран пункт: {choice}\n\n👤 Введите username:"
+    )
+
+    await callback.answer()
 
 
 @dp.message(RunScriptState.waiting_username)
