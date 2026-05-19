@@ -426,7 +426,7 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
     # Если уже выполняется процесс
     if ACTIVE_PROCESS:
         await callback.answer(
-            "⛔ Уже выполняется другой процесс.",
+            "⛔ У вас уже запущен данный скрипт. Дождитесь его остановки и перезапустите.",
             show_alert=True
         )
         return
