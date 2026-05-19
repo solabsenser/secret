@@ -80,7 +80,7 @@ SCRIPTS = {
 bot = Bot(TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 # Текущий активный процесс
-ACTIVE_PROCESS = None
+ACTIVE_PROCESS = False
 
 # =========================
 # STATES
@@ -423,18 +423,22 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
     global ACTIVE_PROCESS
 
-    # Если уже есть активный процесс
-    if ACTIVE_PROCESS is not None:
+    # Если уже выполняется процесс
+    if ACTIVE_PROCESS:
         await callback.answer(
             "⛔ Уже выполняется другой процесс.",
             show_alert=True
         )
         return
 
+    # Блокируем новые запуски
+    ACTIVE_PROCESS = True
+
     data = await state.get_data()
 
     script = SCRIPTS[data["script_key"]]
 
+    # Собираем input()
     inputs = []
 
     if data.get("password"):
@@ -460,7 +464,7 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.edit_text(
         f"⏳ Скрипт запущен.\n"
-        f"Автоостановка через {script['timeout']} сек."
+        f"⏱ Автоостановка через {script['timeout']} сек."
     )
 
     try:
@@ -472,28 +476,26 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
             timeout=script["timeout"]
         )
 
-        # Сохраняем активный процесс
-        ACTIVE_PROCESS = process
-
-        final_text = stdout if stdout else "✅ Скрипт завершён."
+        text = stdout if stdout else "✅ Скрипт завершён."
 
         if stderr:
-            final_text += f"\n\n⚠️ {stderr}"
+            text += f"\n\n⚠️ {stderr}"
 
-        await callback.message.answer(final_text)
+        await callback.message.answer(text)
 
     except Exception as e:
+
         await callback.message.answer(
             f"❌ Ошибка запуска:\n{e}"
         )
 
     finally:
-        # Освобождаем слот
-        ACTIVE_PROCESS = None
+        # Разрешаем запуск снова
+        ACTIVE_PROCESS = False
 
     await state.clear()
     await callback.answer()
-
+    
 # =========================
 # CANCEL
 # =========================
