@@ -94,7 +94,6 @@ class RunScriptState(StatesGroup):
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🚀 Запустить проект")],
-        [KeyboardButton(text="📂 Список скриптов")],
         [KeyboardButton(text="ℹ️ Помощь")],
     ],
     resize_keyboard=True,
@@ -222,7 +221,6 @@ async def start_handler(message: Message):
 # MAIN MENU
 # =========================
 @dp.message(F.text == "🚀 Запустить проект")
-@dp.message(F.text == "📂 Список скриптов")
 async def show_scripts(message: Message, state: FSMContext):
     await state.set_state(RunScriptState.choosing_script)
 
