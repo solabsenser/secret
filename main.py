@@ -271,21 +271,24 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 # START
 # =========================
 @dp.message(CommandStart())
-async def start_handler(message: Message):
+async def start_handler(message: Message, state: FSMContext):
+
+    # Полный сброс состояния
+    await state.clear()
+
     await message.answer(
         "🎮 Добро пожаловать!\n\n"
         "Этот бот может запускать подключенные Python-скрипты через удобное меню.",
         reply_markup=main_keyboard,
     )
 
-
 # =========================
 # MAIN MENU
 # =========================
 @dp.message(F.text == "🚀 Запустить проект")
 async def show_scripts(message: Message, state: FSMContext):
+    await state.clear()
     await state.set_state(RunScriptState.choosing_script)
-
     await message.answer(
         "📌 Выбери скрипт для запуска:",
         reply_markup=scripts_inline_keyboard(),
@@ -294,6 +297,7 @@ async def show_scripts(message: Message, state: FSMContext):
 
 @dp.message(F.text == "ℹ️ Помощь")
 async def help_handler(message: Message):
+    await state.clear()
     await message.answer(
         "🛠 Как подключить свой скрипт:\n\n"
         "1. Помести .py файл в папку scripts/\n"
