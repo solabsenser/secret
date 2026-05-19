@@ -1,0 +1,6 @@
+requests
+fake-useragent
+termcolor
+pyfiglet
+colored
+aiogram
