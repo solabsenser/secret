@@ -141,7 +141,6 @@ def run_external_script(script_path: str, *inputs, timeout=10):
     from pathlib import Path
     import subprocess
     import sys
-    import time
 
     path = Path(script_path)
 
@@ -165,30 +164,51 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             text=True,
         )
 
-        # Передаём input()
-        process.stdin.write(input_data)
-        process.stdin.flush()
+        # Передаём input() и ждём результат
+        stdout, stderr = process.communicate(
+            input=input_data,
+            timeout=timeout
+        )
 
-        # Скрипт работает timeout секунд
-        time.sleep(timeout)
+        # Если stderr не пустой
+        if stderr:
 
-        # Завершаем процесс
-        if process.poll() is None:
+            return (
+                "❌ Скрипт завершился с ошибкой.",
+                stderr,
+                process
+            )
+
+        # Если всё прошло нормально
+        return (
+            "✅ Скрипт успешно выполнился.",
+            stdout,
+            process
+        )
+
+    except subprocess.TimeoutExpired:
+
+        # Если завис или бесконечный цикл
+        if process:
             process.kill()
 
         return (
-            f"✅ Скрипт отработал {timeout} сек. и был остановлен.",
+            f"⏰ Скрипт был остановлен через {timeout} сек.",
             "",
             process
         )
 
     except Exception as e:
 
-        # Ошибка
+        # Ошибка запуска
         if process and process.poll() is None:
             process.kill()
 
-        return "", f"❌ Ошибка запуска: {e}", process
+        return (
+            "❌ Ошибка запуска.",
+            str(e),
+            process
+        )
 
     finally:
 
