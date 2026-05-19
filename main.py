@@ -128,21 +128,21 @@ def confirm_keyboard():
 # =========================
 # HELPERS
 # =========================
-def run_external_script(script_path: str, password: str = "", phone: str = ""):
+def run_external_script(script_path: str, *inputs):
     """
-    Запуск внешнего Python-файла.
-    Автоматически передаёт:
-    1. Пароль
-    2. Номер
+    Универсальный запуск внешнего Python-файла.
 
-    После ввода данные сразу подставляются,
-    поэтому скрипт не зависает на input().
+    Поддерживает:
+    - пароль
+    - номер
+    - username
+    - id
+    - ссылки
+    - любые другие input()
 
-    Если скрипт уходит в цикл —
-    бот завершает его автоматически.
-
-    OUTPUT сокращён:
-    Только короткий статус без ASCII, номеров и лишнего текста.
+    Все данные автоматически передаются
+    в том порядке, в котором input()
+    идут внутри скрипта.
     """
 
     from pathlib import Path
@@ -155,15 +155,7 @@ def run_external_script(script_path: str, password: str = "", phone: str = ""):
     if not path.exists():
         return "❌ Скрипт не найден.", ""
 
-    # Формируем input заранее
-    inputs = []
-
-    if password:
-        inputs.append(password)
-
-    if phone:
-        inputs.append(phone)
-
+    # Формируем input() данные
     input_data = "\n".join(inputs) + "\n"
 
     process = None
@@ -178,21 +170,20 @@ def run_external_script(script_path: str, password: str = "", phone: str = ""):
             text=True,
         )
 
-        # Передаём пароль + номер
+        # Передаём input() данные
         process.communicate(
             input=input_data,
-            timeout=8
+            timeout=10
         )
 
-        # На всякий случай завершаем
+        # Завершаем если ещё работает
         if process.poll() is None:
             process.kill()
 
-        # Короткий статус
         return "✅ Скрипт успешно сработал и завершён.", ""
 
     except subprocess.TimeoutExpired:
-        # Если завис / цикл — выключаем
+        # Если скрипт ушёл в цикл
         if process:
             process.kill()
 
@@ -201,7 +192,7 @@ def run_external_script(script_path: str, password: str = "", phone: str = ""):
             except:
                 pass
 
-        return "✅ Скрипт успешно сработал.", ""
+        return "✅ Скрипт был успешно запущен.", ""
 
     except Exception as e:
         # Ошибка
@@ -335,7 +326,47 @@ async def phone_input(message: Message, state: FSMContext):
         reply_markup=confirm_keyboard(),
     )
 
+@dp.message(RunScriptState.waiting_choice)
+async def choice_input(message: Message, state: FSMContext):
+    await state.update_data(choice=message.text)
 
+    await state.set_state(RunScriptState.waiting_username)
+    await message.answer("👤 Введите username:")
+
+
+@dp.message(RunScriptState.waiting_username)
+async def username_input(message: Message, state: FSMContext):
+    await state.update_data(username=message.text)
+
+    await state.set_state(RunScriptState.waiting_id)
+    await message.answer("🆔 Введите ID:")
+
+
+@dp.message(RunScriptState.waiting_id)
+async def id_input(message: Message, state: FSMContext):
+    await state.update_data(user_id=message.text)
+
+    await state.set_state(RunScriptState.waiting_chat)
+    await message.answer("💬 Введите ссылку:")
+
+
+@dp.message(RunScriptState.waiting_chat)
+async def chat_input(message: Message, state: FSMContext):
+    await state.update_data(chat=message.text)
+
+    await state.set_state(RunScriptState.waiting_violation)
+    await message.answer("⚠️ Введите ссылку на нарушение:")
+
+
+@dp.message(RunScriptState.waiting_violation)
+async def violation_input(message: Message, state: FSMContext):
+    await state.update_data(violation=message.text)
+
+    await message.answer(
+        "✅ Все данные получены.",
+        reply_markup=confirm_keyboard(),
+    )
+    
 # =========================
 # RUN SCRIPT
 # =========================
@@ -345,39 +376,63 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
     script = SCRIPTS[data["script_key"]]
 
-    password = data.get("password", "")
-    phone = data.get("phone", "")
+    # Собираем ВСЕ input() по порядку
+    inputs = []
+
+    if data.get("password"):
+        inputs.append(data["password"])
+
+    if data.get("phone"):
+        inputs.append(data["phone"])
+
+    if data.get("choice"):
+        inputs.append(data["choice"])
+
+    if data.get("username"):
+        inputs.append(data["username"])
+
+    if data.get("user_id"):
+        inputs.append(data["user_id"])
+
+    if data.get("chat"):
+        inputs.append(data["chat"])
+
+    if data.get("violation"):
+        inputs.append(data["violation"])
 
     await callback.message.edit_text("⏳ Запускаю скрипт...")
 
     try:
+        # Передаём все input() в скрипт
         stdout, stderr = await asyncio.to_thread(
             run_external_script,
             script["file"],
-            password,
-            phone,
+            *inputs
         )
 
         result_parts = []
 
         if stdout:
-            result_parts.append(f"📄 OUTPUT:\n{stdout[:3500]}")
+            result_parts.append(f"{stdout}")
 
         if stderr:
-            result_parts.append(f"⚠️ ERRORS:\n{stderr[:3500]}")
+            result_parts.append(f"⚠️ {stderr}")
 
-        final_text = "\n\n".join(result_parts) if result_parts else "✅ Скрипт завершён без вывода."
+        final_text = "\n\n".join(result_parts)
+
+        if not final_text:
+            final_text = "✅ Скрипт завершён."
 
         await callback.message.answer(final_text)
 
     except subprocess.TimeoutExpired:
         await callback.message.answer("⏰ Скрипт выполнялся слишком долго.")
+
     except Exception as e:
         await callback.message.answer(f"❌ Ошибка запуска:\n{e}")
 
     await state.clear()
     await callback.answer()
-
 
 # =========================
 # CANCEL
