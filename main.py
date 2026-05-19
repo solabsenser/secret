@@ -302,13 +302,22 @@ async def password_input(message: Message, state: FSMContext):
     data = await state.get_data()
     script = SCRIPTS[data["script_key"]]
 
+    # Если нужен номер
     if script.get("needs_phone"):
         await state.set_state(RunScriptState.waiting_phone)
-        await message.answer("📱 Теперь введи номер телефона:")
 
+        await message.answer(
+            "📱 Теперь введи номер телефона:"
+        )
+
+    # Если нужен выбор меню
     elif script.get("needs_choice"):
         await state.set_state(RunScriptState.waiting_choice)
-        await message.answer("📋 Введите пункт меню:")
+
+        await message.answer(
+            "📋 Выберите раздел:",
+            reply_markup=menu_keyboard()
+        )
 
     else:
         await message.answer(
