@@ -47,8 +47,13 @@ SCRIPTS = {
     "tele": {
         "name": "TeleSession Demo",
         "file": "scripts/TeleSession.py",
+
         "needs_password": True,
         "needs_phone": True,
+
+        # Время работы
+        "timeout": 10,
+        "info": "⏳ Время работы: 10 секунд",
     },
 
     "project": {
@@ -57,12 +62,15 @@ SCRIPTS = {
 
         "needs_password": True,
 
-        # Дополнительные input()
         "needs_choice": True,
         "needs_username": True,
         "needs_id": True,
         "needs_chat": True,
         "needs_violation": True,
+
+        # Время работы
+        "timeout": 60,
+        "info": "⏳ Время работы: 1 минута",
     }
 }
 
@@ -127,32 +135,18 @@ def confirm_keyboard():
 # =========================
 # HELPERS
 # =========================
-def run_external_script(script_path: str, *inputs):
-    """
-    Универсальный запуск внешнего Python-файла.
-
-    Поддерживает:
-    - пароль
-    - номер
-    - username
-    - id
-    - ссылки
-    - любые другие input()
-
-    Все данные автоматически передаются
-    в том порядке, в котором input()
-    идут внутри скрипта.
-    """
+def run_external_script(script_path: str, *inputs, timeout=10):
 
     from pathlib import Path
     import subprocess
     import sys
+    import time
 
     path = Path(script_path)
 
     # Проверка файла
     if not path.exists():
-        return "❌ Скрипт не найден.", ""
+        return "❌ Скрипт не найден.", "", None
 
     # Формируем input() данные
     input_data = "\n".join(inputs) + "\n"
@@ -160,6 +154,7 @@ def run_external_script(script_path: str, *inputs):
     process = None
 
     try:
+
         # Запуск процесса
         process = subprocess.Popen(
             [sys.executable, str(path)],
@@ -169,38 +164,33 @@ def run_external_script(script_path: str, *inputs):
             text=True,
         )
 
-        # Передаём input() данные
-        process.communicate(
-            input=input_data,
-            timeout=10
-        )
+        # Передаём input()
+        process.stdin.write(input_data)
+        process.stdin.flush()
 
-        # Завершаем если ещё работает
+        # Скрипт работает timeout секунд
+        time.sleep(timeout)
+
+        # Завершаем процесс
         if process.poll() is None:
             process.kill()
 
-        return "✅ Скрипт успешно сработал и завершён.", ""
-
-    except subprocess.TimeoutExpired:
-        # Если скрипт ушёл в цикл
-        if process:
-            process.kill()
-
-            try:
-                process.communicate(timeout=2)
-            except:
-                pass
-
-        return "✅ Скрипт был успешно запущен.", ""
+        return (
+            f"✅ Скрипт отработал {timeout} сек. и был остановлен.",
+            "",
+            process
+        )
 
     except Exception as e:
+
         # Ошибка
         if process and process.poll() is None:
             process.kill()
 
-        return "", f"❌ Ошибка запуска: {e}"
+        return "", f"❌ Ошибка запуска: {e}", process
 
     finally:
+
         # Гарантированное завершение
         if process and process.poll() is None:
             process.kill()
@@ -261,7 +251,9 @@ async def script_selected(callback: CallbackQuery, state: FSMContext):
         await state.set_state(RunScriptState.waiting_password)
 
         await callback.message.edit_text(
-            f"🔐 Выбран: {script['name']}\nВведите пароль:"
+            f"🔐 Выбран: {script['name']}\n"
+            f"{script.get('info', '')}\n\n"
+            "Введите пароль:"
         )
 
     # Если нужен номер
@@ -427,11 +419,21 @@ async def violation_input(message: Message, state: FSMContext):
 # =========================
 @dp.callback_query(F.data == "confirm_run")
 async def confirm_run(callback: CallbackQuery, state: FSMContext):
+
+    global ACTIVE_PROCESS
+
+    # Если уже есть активный процесс
+    if ACTIVE_PROCESS is not None:
+        await callback.answer(
+            "⛔ Уже выполняется другой процесс.",
+            show_alert=True
+        )
+        return
+
     data = await state.get_data()
 
     script = SCRIPTS[data["script_key"]]
 
-    # Собираем ВСЕ input() по порядку
     inputs = []
 
     if data.get("password"):
@@ -455,36 +457,38 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
     if data.get("violation"):
         inputs.append(data["violation"])
 
-    await callback.message.edit_text("⏳ Запускаю скрипт...")
+    await callback.message.edit_text(
+        f"⏳ Скрипт запущен.\n"
+        f"Автоостановка через {script['timeout']} сек."
+    )
 
     try:
-        # Передаём все input() в скрипт
-        stdout, stderr = await asyncio.to_thread(
+
+        stdout, stderr, process = await asyncio.to_thread(
             run_external_script,
             script["file"],
-            *inputs
+            *inputs,
+            timeout=script["timeout"]
         )
 
-        result_parts = []
+        # Сохраняем активный процесс
+        ACTIVE_PROCESS = process
 
-        if stdout:
-            result_parts.append(f"{stdout}")
+        final_text = stdout if stdout else "✅ Скрипт завершён."
 
         if stderr:
-            result_parts.append(f"⚠️ {stderr}")
-
-        final_text = "\n\n".join(result_parts)
-
-        if not final_text:
-            final_text = "✅ Скрипт завершён."
+            final_text += f"\n\n⚠️ {stderr}"
 
         await callback.message.answer(final_text)
 
-    except subprocess.TimeoutExpired:
-        await callback.message.answer("⏰ Скрипт выполнялся слишком долго.")
-
     except Exception as e:
-        await callback.message.answer(f"❌ Ошибка запуска:\n{e}")
+        await callback.message.answer(
+            f"❌ Ошибка запуска:\n{e}"
+        )
+
+    finally:
+        # Освобождаем слот
+        ACTIVE_PROCESS = None
 
     await state.clear()
     await callback.answer()
