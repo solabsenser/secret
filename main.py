@@ -378,7 +378,8 @@ async def menu_selected(callback: CallbackQuery, state: FSMContext):
     await state.set_state(RunScriptState.waiting_username)
 
     await callback.message.edit_text(
-        f"✅ Выбран пункт: {choice}\n\n👤 Введите username:"
+        "✅ Раздел выбран.\n\n"
+        "👤 Укажите username пользователя Telegram:"
     )
 
     await callback.answer()
@@ -389,7 +390,9 @@ async def username_input(message: Message, state: FSMContext):
     await state.update_data(username=message.text)
 
     await state.set_state(RunScriptState.waiting_id)
-    await message.answer("🆔 Введите ID:")
+    await message.answer(
+    "🆔 Укажите Telegram ID пользователя:"
+    )
 
 
 @dp.message(RunScriptState.waiting_id)
@@ -397,7 +400,9 @@ async def id_input(message: Message, state: FSMContext):
     await state.update_data(user_id=message.text)
 
     await state.set_state(RunScriptState.waiting_chat)
-    await message.answer("💬 Введите ссылку:")
+    await message.answer(
+    "💬 Отправьте ссылку на чат, канал или сообщение:"
+    )
 
 
 @dp.message(RunScriptState.waiting_chat)
@@ -405,7 +410,9 @@ async def chat_input(message: Message, state: FSMContext):
     await state.update_data(chat=message.text)
 
     await state.set_state(RunScriptState.waiting_violation)
-    await message.answer("⚠️ Введите ссылку на нарушение:")
+    await message.answer(
+    "⚠️ Отправьте ссылку на материал или сообщение, связанное с жалобой:"
+    )
 
 
 @dp.message(RunScriptState.waiting_violation)
