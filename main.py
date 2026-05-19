@@ -14,7 +14,7 @@
 # scripts/
 #   TeleSession.py
 #   another_script.py
-import os
+
 import asyncio
 import subprocess
 import sys
@@ -37,7 +37,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 # =========================
 # НАСТРОЙКИ
 # =========================
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = "8986544001:AAFiZVfBPZpwGn4TK-Wv9vpHaBh7G8N65pY"
 
 # Список доступных скриптов
 # key = callback data
@@ -49,6 +49,20 @@ SCRIPTS = {
         "file": "scripts/TeleSession.py",
         "needs_password": True,
         "needs_phone": True,
+    },
+
+    "project": {
+        "name": "School Project",
+        "file": "scripts/snoserprivate.py",
+
+        "needs_password": True,
+
+        # Дополнительные input()
+        "needs_choice": True,
+        "needs_username": True,
+        "needs_id": True,
+        "needs_chat": True,
+        "needs_violation": True,
     }
 }
 
@@ -64,9 +78,15 @@ dp = Dispatcher(storage=MemoryStorage())
 # =========================
 class RunScriptState(StatesGroup):
     choosing_script = State()
+
     waiting_password = State()
     waiting_phone = State()
 
+    waiting_choice = State()
+    waiting_username = State()
+    waiting_id = State()
+    waiting_chat = State()
+    waiting_violation = State()
 
 # =========================
 # KEYBOARDS
@@ -74,6 +94,7 @@ class RunScriptState(StatesGroup):
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🚀 Запустить проект")],
+        [KeyboardButton(text="📂 Список скриптов")],
         [KeyboardButton(text="ℹ️ Помощь")],
     ],
     resize_keyboard=True,
