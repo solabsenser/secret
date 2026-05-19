@@ -258,16 +258,30 @@ async def script_selected(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data(script_key=script_key)
 
-    if script["needs_password"]:
+    # Если нужен пароль
+    if script.get("needs_password"):
         await state.set_state(RunScriptState.waiting_password)
+
         await callback.message.edit_text(
             f"🔐 Выбран: {script['name']}\nВведите пароль:"
         )
-    elif script["needs_phone"]:
+
+    # Если нужен номер
+    elif script.get("needs_phone"):
         await state.set_state(RunScriptState.waiting_phone)
+
         await callback.message.edit_text(
             f"📱 Выбран: {script['name']}\nВведите номер:"
         )
+
+    # Если нужен выбор меню
+    elif script.get("needs_choice"):
+        await state.set_state(RunScriptState.waiting_choice)
+
+        await callback.message.edit_text(
+            f"📋 Выбран: {script['name']}\nВведите пункт меню:"
+        )
+
     else:
         await callback.message.edit_text(
             f"⚡ Выбран: {script['name']}\nГотов к запуску.",
@@ -287,15 +301,19 @@ async def password_input(message: Message, state: FSMContext):
     data = await state.get_data()
     script = SCRIPTS[data["script_key"]]
 
-    if script["needs_phone"]:
+    if script.get("needs_phone"):
         await state.set_state(RunScriptState.waiting_phone)
         await message.answer("📱 Теперь введи номер телефона:")
+
+    elif script.get("needs_choice"):
+        await state.set_state(RunScriptState.waiting_choice)
+        await message.answer("📋 Введите пункт меню:")
+
     else:
         await message.answer(
-            "✅ Данные получены. Готов к запуску.",
+            "✅ Данные получены.",
             reply_markup=confirm_keyboard(),
         )
-
 
 # =========================
 # PHONE INPUT
