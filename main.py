@@ -74,7 +74,6 @@ class RunScriptState(StatesGroup):
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🚀 Запустить проект")],
-        [KeyboardButton(text="📂 Список скриптов")],
         [KeyboardButton(text="ℹ️ Помощь")],
     ],
     resize_keyboard=True,
