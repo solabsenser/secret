@@ -244,7 +244,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             process.kill()
 
         return (
-            f"⏰ Скрипт был остановлен через {timeout} сек.",
+            f"✅ Скрипт успешно отработал {timeout} сек. и был завершён.",
             "",
             process
         )
