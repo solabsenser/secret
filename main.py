@@ -79,7 +79,8 @@ SCRIPTS = {
 # =========================
 bot = Bot(TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
-
+# Текущий активный процесс
+ACTIVE_PROCESS = None
 
 # =========================
 # STATES
