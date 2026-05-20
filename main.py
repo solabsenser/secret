@@ -278,7 +278,7 @@ async def start_handler(message: Message, state: FSMContext):
     await state.clear()
 
     await message.answer(
-        "Hello Stranger.\n\n"
+        "Hello Stranger.\n"
         "No questions. Just be yourself.",
         reply_markup=main_keyboard,
     )
