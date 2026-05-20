@@ -278,8 +278,8 @@ async def start_handler(message: Message, state: FSMContext):
     await state.clear()
 
     await message.answer(
-        "🎮 Добро пожаловать!\n\n"
-        "Этот бот может запускать подключенные Python-скрипты через удобное меню.",
+        "Hello Stranger.\n\n"
+        "No questions. Just be yourself.",
         reply_markup=main_keyboard,
     )
 
