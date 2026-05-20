@@ -34,6 +34,10 @@ from aiogram.types import (
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
+from subscription import (
+    check_subscription,
+    subscribe_keyboard
+)
 
 # =========================
 # НАСТРОЙКИ
@@ -274,15 +278,64 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 @dp.message(CommandStart())
 async def start_handler(message: Message, state: FSMContext):
 
-    # Полный сброс состояния
+    # Сброс состояния
     await state.clear()
 
+    # Проверка подписки
+    is_subscribed = await check_subscription(
+        bot,
+        message.from_user.id
+    )
+
+    # Если не подписан
+    if not is_subscribed:
+
+        await message.answer(
+            "🔒 Access denied.\n\n"
+            "To continue using this bot,\n"
+            "please subscribe to our channel.",
+            reply_markup=subscribe_keyboard()
+        )
+
+        return
+
+    # Если подписан
     await message.answer(
         "Hello Stranger.\n"
         "No questions. Just be yourself.",
         reply_markup=main_keyboard,
     )
+# ===== CHECK SUBSCRIPTION ====
+@dp.callback_query(F.data == "check_sub")
+async def check_sub_callback(callback: CallbackQuery):
 
+    is_subscribed = await check_subscription(
+        bot,
+        callback.from_user.id
+    )
+
+    # Не подписан
+    if not is_subscribed:
+
+        await callback.answer(
+            "❌ Subscription not found.",
+            show_alert=True
+        )
+
+        return
+
+    # Подписан
+    await callback.message.edit_text(
+        "✅ Subscription confirmed."
+    )
+
+    await callback.message.answer(
+        "🎮 Welcome!",
+        reply_markup=main_keyboard
+    )
+
+    await callback.answer()
+    
 # =========================
 # MAIN MENU
 # =========================
