@@ -297,14 +297,22 @@ async def show_scripts(message: Message, state: FSMContext):
 
 
 @dp.message(F.text == "ℹ️ Помощь")
-async def help_handler(message: Message):
+async def help_handler(message: Message, state: FSMContext):
+
+    # Сброс состояния
     await state.clear()
+
     await message.answer(
-        "🛠 Как подключить свой скрипт:\n\n"
-        "1. Помести .py файл в папку scripts/\n"
-        "2. Добавь его в словарь SCRIPTS\n"
-        "3. Укажи, нужны ли пароль/номер\n\n"
-        "После этого бот сможет запускать его через меню."
+        "ℹ️ <b>Информация</b>\n\n"
+        "Бот предназначен для запуска "
+        "подключённых Python-скриптов.\n\n"
+
+        "🚀 Для начала работы нажмите "
+        "«Запустить проект».\n\n"
+
+        "🔐 <b>Не знаете пароль?</b>\n"
+        "Обратитесь к администратору.",
+        parse_mode="HTML"
     )
 
 
