@@ -648,7 +648,7 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
     if data.get("violation"):
         inputs.append(data["violation"])
 
-    await callback.message.edit_text(
+    status_message = await callback.message.edit_text(
         f"⏳ Скрипт запущен.\n"
         f"⏱ Автоостановка через {script['timeout']} сек."
     )
@@ -675,7 +675,10 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
             if len(stderr) > 3500:
                 text += "\n\n... error truncated ..."
 
-        await callback.message.answer(text)
+        await status_message.edit_text(
+            text,
+            reply_markup=None
+        )
 
     except Exception as e:
 
