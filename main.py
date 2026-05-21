@@ -362,7 +362,7 @@ async def help_handler(message: Message, state: FSMContext):
         "connected Python scripts.\n\n"
 
         "🚀 To get started, press "
-        ""Launch Project".\n\n"
+        "«Launch Project»".\n\n"
 
         "🔐 <b>Don’t know the password?</b>\n"
         "Contact the administrator.",
@@ -414,7 +414,7 @@ async def script_selected(callback: CallbackQuery, state: FSMContext):
 
     else:
         await callback.message.edit_text(
-            f"⚡ Выбран: {script['name']}\nReady to launch.",
+            f"⚡ Selected: {script['name']}\nReady to launch.",
             reply_markup=confirm_keyboard(),
         )
 
