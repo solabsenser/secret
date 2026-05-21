@@ -609,6 +609,16 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
     data = await state.get_data()
 
+    # Если state уже очищен
+    if "script_key" not in data:
+
+        await callback.answer(
+            "⚠️ Session expired. Please start again.",
+            show_alert=True
+        )
+
+        return
+
     script = SCRIPTS[data["script_key"]]
 
     # Собираем input()
