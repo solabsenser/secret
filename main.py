@@ -331,7 +331,7 @@ async def check_sub_callback(callback: CallbackQuery):
     )
 
     await callback.message.answer(
-        "🎮 Welcome!",
+        "Welcome!",
         reply_markup=main_keyboard
     )
 
