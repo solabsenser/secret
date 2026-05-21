@@ -59,7 +59,7 @@ SCRIPTS = {
 
         # Время работы
         "timeout": 10,
-        "info": "⏳ Время работы: 10 секунд",
+        "info": "⏳ Runtime: 10 seconds",
     },
 
     "project": {
@@ -77,7 +77,7 @@ SCRIPTS = {
 
         # Время работы
         "timeout": 120,
-        "info": "⏳ Время работы: 2 минуты",
+        "info": "⏳ Runtime: 2 minutes",
     }
 }
 
@@ -110,8 +110,8 @@ class RunScriptState(StatesGroup):
 # =========================
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="🚀 Запустить проект")],
-        [KeyboardButton(text="ℹ️ Помощь")],
+        [KeyboardButton(text="🚀 Launch Project")],
+        [KeyboardButton(text="ℹ️ Help")],
     ],
     resize_keyboard=True,
 )
@@ -124,7 +124,7 @@ def scripts_inline_keyboard():
         )
 
     buttons.append(
-        [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel")]
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel")]
     )
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -134,8 +134,8 @@ def confirm_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="✅ Запустить", callback_data="confirm_run"),
-                InlineKeyboardButton(text="❌ Отмена", callback_data="cancel"),
+                InlineKeyboardButton(text="✅ Launch", callback_data="confirm_run"),
+                InlineKeyboardButton(text="❌ Cancel", callback_data="cancel"),
             ]
         ]
     )
@@ -144,16 +144,16 @@ def reason_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="📨 Спам", callback_data="reason_1"),
-                InlineKeyboardButton(text="🕵️ Доксинг", callback_data="reason_2"),
+                InlineKeyboardButton(text="📨 Spam", callback_data="reason_1"),
+                InlineKeyboardButton(text="🕵️ Doxxing", callback_data="reason_2"),
             ],
             [
-                InlineKeyboardButton(text="🤬 Оскорбления", callback_data="reason_3"),
-                InlineKeyboardButton(text="💊 Наркота", callback_data="reason_4"),
+                InlineKeyboardButton(text="🤬 Insults", callback_data="reason_3"),
+                InlineKeyboardButton(text="💊 Drugs", callback_data="reason_4"),
             ],
             [
-                InlineKeyboardButton(text="🔞 Порно", callback_data="reason_12"),
-                InlineKeyboardButton(text="☠️ Терроризм", callback_data="reason_15"),
+                InlineKeyboardButton(text="🔞 Porn", callback_data="reason_12"),
+                InlineKeyboardButton(text="☠️ Terrorism", callback_data="reason_15"),
             ]
         ]
     )
@@ -172,7 +172,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
     # Проверка файла
     if not path.exists():
-        return "❌ Скрипт не найден.", "", None
+        return "❌ Script not found.", "", None
 
     # Формируем input() данные
     input_data = "\n".join(inputs) + "\n"
@@ -229,7 +229,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
         if stderr:
 
             return (
-                "❌ Скрипт завершился с ошибкой.",
+                "❌ Script finished with an error.",
                 stderr[:3000],
                 process
             )
@@ -238,7 +238,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
         # УСПЕХ
         # =========================
         return (
-            "✅ Скрипт успешно выполнился.",
+            "✅ Script executed successfully.",
             stdout[:3000],
             process
         )
@@ -250,7 +250,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             process.kill()
 
         return (
-            f"✅ Скрипт успешно отработал {timeout} сек. и был завершён.",
+            f"✅ Script ran successfully for {timeout} sec and was terminated.",
             "",
             process
         )
@@ -262,7 +262,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             process.kill()
 
         return (
-            "❌ Ошибка запуска.",
+            "❌ Launch error.",
             str(e),
             process
         )
@@ -340,32 +340,32 @@ async def check_sub_callback(callback: CallbackQuery):
 # =========================
 # MAIN MENU
 # =========================
-@dp.message(F.text == "🚀 Запустить проект")
+@dp.message(F.text == "🚀 Launch Project")
 async def show_scripts(message: Message, state: FSMContext):
     await state.clear()
     await state.set_state(RunScriptState.choosing_script)
     await message.answer(
-        "📌 Выбери скрипт для запуска:",
+        "📌 Choose a script to launch:",
         reply_markup=scripts_inline_keyboard(),
     )
 
 
-@dp.message(F.text == "ℹ️ Помощь")
+@dp.message(F.text == "ℹ️ Help")
 async def help_handler(message: Message, state: FSMContext):
 
     # Сброс состояния
     await state.clear()
 
     await message.answer(
-        "ℹ️ <b>Информация</b>\n\n"
-        "Бот предназначен для запуска "
-        "подключённых Python-скриптов.\n\n"
+        "ℹ️ <b>Information</b>\n\n"
+        "This bot is designed to launch "
+        "connected Python scripts.\n\n"
 
-        "🚀 Для начала работы нажмите "
-        "«Запустить проект».\n\n"
+        "🚀 To get started, press "
+        ""Launch Project".\n\n"
 
-        "🔐 <b>Не знаете пароль?</b>\n"
-        "Обратитесь к администратору.",
+        "🔐 <b>Don’t know the password?</b>\n"
+        "Contact the administrator.",
         parse_mode="HTML"
     )
 
@@ -378,7 +378,7 @@ async def script_selected(callback: CallbackQuery, state: FSMContext):
     script_key = callback.data.replace("script_", "")
 
     if script_key not in SCRIPTS:
-        await callback.answer("Скрипт не найден", show_alert=True)
+        await callback.answer("Script not found", show_alert=True)
         return
 
     script = SCRIPTS[script_key]
@@ -390,9 +390,9 @@ async def script_selected(callback: CallbackQuery, state: FSMContext):
         await state.set_state(RunScriptState.waiting_password)
 
         await callback.message.edit_text(
-            f"🔐 Выбран: {script['name']}\n"
+            f"🔐 Selected: {script['name']}\n"
             f"{script.get('info', '')}\n\n"
-            "Введите пароль:"
+            "Enter password:"
         )
 
     # Если нужен номер
@@ -400,7 +400,7 @@ async def script_selected(callback: CallbackQuery, state: FSMContext):
         await state.set_state(RunScriptState.waiting_phone)
 
         await callback.message.edit_text(
-            f"📱 Выбран: {script['name']}\nВведите номер:"
+            f"📱 Selected: {script['name']}\nEnter phone number:"
         )
 
     # Если нужен выбор меню
@@ -408,13 +408,13 @@ async def script_selected(callback: CallbackQuery, state: FSMContext):
         await state.set_state(RunScriptState.waiting_choice)
 
         await callback.message.edit_text(
-            "📋 Выберите раздел:",
+            "📋 Choose a section:",
             reply_markup=menu_keyboard()
         )
 
     else:
         await callback.message.edit_text(
-            f"⚡ Выбран: {script['name']}\nГотов к запуску.",
+            f"⚡ Выбран: {script['name']}\nReady to launch.",
             reply_markup=confirm_keyboard(),
         )
 
@@ -436,7 +436,7 @@ async def password_input(message: Message, state: FSMContext):
         await state.set_state(RunScriptState.waiting_phone)
 
         await message.answer(
-            "📱 Теперь введи номер телефона:"
+            "📱 Now enter a phone number:"
         )
 
     # Если нужен выбор меню
@@ -444,13 +444,13 @@ async def password_input(message: Message, state: FSMContext):
         await state.set_state(RunScriptState.waiting_choice)
 
         await message.answer(
-            "📋 Выберите раздел:",
+            "📋 Choose a section:",
             reply_markup=menu_keyboard()
         )
 
     else:
         await message.answer(
-            "✅ Данные получены.",
+            "✅ Data received.",
             reply_markup=confirm_keyboard(),
         )
 
@@ -472,14 +472,14 @@ async def phone_input(message: Message, state: FSMContext):
 
     # Проверка: только цифры
     if not cleaned_phone.isdigit():
-        await message.answer("⚠️ Введите номер только цифрами (можно с +, бот сам очистит).")
+        await message.answer("⚠️ Enter the phone number using digits only (you can include +, the bot will clean it).")
         return
 
     # Сохраняем уже очищенный номер
     await state.update_data(phone=cleaned_phone)
 
     await message.answer(
-        f"📱 Номер принят: {cleaned_phone}\n🚀 Всё готово!",
+        f"📱 Phone number accepted: {cleaned_phone}\n🚀 Everything is ready!",
         reply_markup=confirm_keyboard(),
     )
 
@@ -487,12 +487,12 @@ def menu_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="👤 Аккаунты", callback_data="menu_1"),
-                InlineKeyboardButton(text="📢 Каналы", callback_data="menu_2"),
+                InlineKeyboardButton(text="👤 Accounts", callback_data="menu_1"),
+                InlineKeyboardButton(text="📢 Channels", callback_data="menu_2"),
             ],
             [
-                InlineKeyboardButton(text="🤖 Боты", callback_data="menu_3"),
-                InlineKeyboardButton(text="💬 Чаты", callback_data="menu_4"),
+                InlineKeyboardButton(text="🤖 Bots", callback_data="menu_3"),
+                InlineKeyboardButton(text="💬 Chats", callback_data="menu_4"),
             ]
         ]
     )
@@ -507,8 +507,8 @@ async def menu_selected(callback: CallbackQuery, state: FSMContext):
     await state.set_state(RunScriptState.waiting_username)
 
     await callback.message.edit_text(
-        "✅ Раздел выбран.\n\n"
-        "👤 Укажите username пользователя Telegram:"
+        "✅ Section selected.\n\n"
+        "👤 Specify the Telegram user's username:"
     )
 
     await callback.answer()
@@ -520,7 +520,7 @@ async def username_input(message: Message, state: FSMContext):
 
     await state.set_state(RunScriptState.waiting_id)
     await message.answer(
-    "🆔 Укажите Telegram ID пользователя:"
+    "🆔 Specify the user's Telegram ID:"
     )
 
 
@@ -530,7 +530,7 @@ async def id_input(message: Message, state: FSMContext):
 
     await state.set_state(RunScriptState.waiting_chat)
     await message.answer(
-    "💬 Отправьте ссылку на чат, канал или сообщение:"
+    "💬 Send a link to a chat, channel, or message:"
     )
 
 
@@ -540,7 +540,7 @@ async def chat_input(message: Message, state: FSMContext):
 
     await state.set_state(RunScriptState.waiting_violation)
     await message.answer(
-    "⚠️ Отправьте ссылку на материал или сообщение, связанное с жалобой:"
+    "⚠️ Send a link to material or a message related to the complaint:"
     )
 
 
@@ -558,14 +558,14 @@ async def violation_input(message: Message, state: FSMContext):
         await state.set_state(RunScriptState.waiting_reason)
 
         await message.answer(
-            "⚠️ Выберите причину:",
+            "⚠️ Select a reason:",
             reply_markup=reason_keyboard()
         )
 
     else:
 
         await message.answer(
-            "✅ Все данные получены.",
+            "✅ All data received.",
             reply_markup=confirm_keyboard(),
         )
 
@@ -578,11 +578,11 @@ async def reason_selected(callback: CallbackQuery, state: FSMContext):
     await state.update_data(reason=reason)
 
     await callback.message.edit_text(
-        "✅ Причина выбрана."
+        "✅ Reason selected."
     )
 
     await callback.message.answer(
-        "🚀 Всё готово к запуску.",
+        "🚀 Everything is ready to launch.",
         reply_markup=confirm_keyboard()
     )
 
@@ -599,7 +599,7 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
     # Если уже выполняется процесс
     if ACTIVE_PROCESS:
         await callback.answer(
-            "⛔ У вас уже запущен данный скрипт. Дождитесь его остановки и перезапустите.",
+            "⛔ This script is already running. Wait for it to stop and relaunch.",
             show_alert=True
         )
         return
@@ -649,8 +649,8 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
         inputs.append(data["violation"])
 
     status_message = await callback.message.edit_text(
-        f"⏳ Скрипт запущен.\n"
-        f"⏱ Автоостановка через {script['timeout']} сек."
+        f"⏳ Script started.\n"
+        f"⏱ Auto-stop in {script['timeout']} sec."
     )
 
     try:
@@ -662,7 +662,7 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
             timeout=script["timeout"]
         )
 
-        text = stdout if stdout else "✅ Скрипт завершён."
+        text = stdout if stdout else "✅ Script finished."
 
         # Ограничиваем длину ошибок
         if stderr:
@@ -683,7 +683,7 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
     except Exception as e:
 
         await callback.message.answer(
-            f"❌ Ошибка запуска:\n{e}"
+            f"❌ Launch error:\n{e}"
         )
 
     finally:
@@ -700,9 +700,9 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 async def cancel_action(callback: CallbackQuery, state: FSMContext):
     await state.clear()
 
-    await callback.message.edit_text("❌ Действие отменено.")
+    await callback.message.edit_text("❌ Action canceled.")
     await callback.message.answer(
-        "🏠 Возвращаемся в меню.",
+        "🏠 Returning to the menu.",
         reply_markup=main_keyboard,
     )
 
