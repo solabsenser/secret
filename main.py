@@ -51,6 +51,7 @@ TOKEN = "8986544001:AAFiZVfBPZpwGn4TK-Wv9vpHaBh7G8N65pY"
 # file = путь к файлу
 # needs_password / needs_phone = какие данные спросить
 SCRIPTS = {
+
     "tele": {
         "name": "TeleSession Demo",
         "file": "scripts/TeleSession.py",
@@ -58,7 +59,6 @@ SCRIPTS = {
         "needs_password": True,
         "needs_phone": True,
 
-        # Время работы
         "timeout": 10,
         "info": "⏳ Runtime: 10 seconds",
     },
@@ -76,9 +76,19 @@ SCRIPTS = {
         "needs_violation": True,
         "needs_reason": True,
 
-        # Время работы
         "timeout": 120,
         "info": "⏳ Runtime: 2 minutes",
+    },
+
+    "osint": {
+        "name": "OSINTGRAM",
+        "file": "scripts/osintgram/main.py",
+
+        # Передаём username аргументом
+        "needs_username": True,
+
+        "timeout": 30,
+        "info": "⏳ Runtime: 30 seconds",
     }
 }
 
@@ -184,7 +194,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
         # Запуск процесса
         process = subprocess.Popen(
-            [sys.executable, str(path)],
+            [sys.executable, str(path), *inputs],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -193,7 +203,6 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
         # Передаём input() и ждём результат
         stdout, stderr = process.communicate(
-            input=input_data,
             timeout=timeout
         )
 
