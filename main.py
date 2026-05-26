@@ -192,6 +192,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
         process = subprocess.Popen(
             [sys.executable, str(path), *inputs],
+            stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -199,6 +200,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
         # Ждём результат
         stdout, stderr = process.communicate(
+            input="info\nexit\n",
             timeout=timeout
         )
         
