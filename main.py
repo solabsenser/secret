@@ -222,6 +222,9 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             "Type 'FILE'",
             "Type 'JSON'",
             "Run a command:",
+            "HikerAPI",
+            "[HD PROFILE PIC]",
+            "• @Username (Full Name)",
             "_____",
             "\\_____",
             "/_____/",
@@ -236,11 +239,11 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             if not line:
                 continue
 
-            # Help/banner мусор
+            # Убираем help/banner мусор
             if any(word in line for word in skip_words):
                 continue
 
-            # Убираем ASCII баннер
+            # Убираем ASCII
             if (
                 "██" in line
                 or "══" in line
@@ -256,20 +259,23 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
                 if len(parts) >= 3:
 
-                    user_id = parts[0]
                     username = parts[1]
                     fullname = parts[2]
 
-                    line = (
-                        f"• @{username}"
-                        f" ({fullname})"
-                    )
+                    if fullname == "":
+                        fullname = "No Name"
+
+                    line = f"• @{username} ({fullname})"
 
                 else:
                     continue
 
             # Убираем линии таблиц
             if line.startswith("+"):
+                continue
+
+            # Обрезаем слишком длинные ссылки
+            if "http" in line and len(line) > 100:
                 continue
 
             cleaned_lines.append(line)
