@@ -580,16 +580,54 @@ def menu_keyboard():
 
 @dp.callback_query(F.data.startswith("menu_"))
 async def menu_selected(callback: CallbackQuery, state: FSMContext):
+
     choice = callback.data.replace("menu_", "")
 
     await state.update_data(choice=choice)
 
-    await state.set_state(RunScriptState.waiting_username)
+    # =========================
+    # ACCOUNTS
+    # =========================
+    if choice == "1":
 
-    await callback.message.edit_text(
-        "✅ Section selected.\n\n"
-        "👤 Specify the Telegram user's username:"
-    )
+        await state.set_state(RunScriptState.waiting_username)
+
+        await callback.message.edit_text(
+            "👤 Enter Telegram username:"
+        )
+
+    # =========================
+    # CHANNELS
+    # =========================
+    elif choice == "2":
+
+        await state.set_state(RunScriptState.waiting_chat)
+
+        await callback.message.edit_text(
+            "📢 Send channel link:"
+        )
+
+    # =========================
+    # BOTS
+    # =========================
+    elif choice == "3":
+
+        await state.set_state(RunScriptState.waiting_username)
+
+        await callback.message.edit_text(
+            "🤖 Enter bot username:"
+        )
+
+    # =========================
+    # CHATS
+    # =========================
+    elif choice == "4":
+
+        await state.set_state(RunScriptState.waiting_chat)
+
+        await callback.message.edit_text(
+            "💬 Send chat link:"
+        )
 
     await callback.answer()
 
@@ -600,42 +638,122 @@ async def username_input(message: Message, state: FSMContext):
     await state.update_data(username=message.text)
 
     data = await state.get_data()
-    script = SCRIPTS[data["script_key"]]
 
-    # Если нужен ID
-    if script.get("needs_id"):
+    choice = data.get("choice")
 
-        await state.set_state(RunScriptState.waiting_id)
-
-        await message.answer(
-            "🆔 Specify the user's Telegram ID:"
-        )
-
-    else:
+    # =========================
+    # OSINT
+    # =========================
+    if data.get("script_key") == "osint":
 
         await message.answer(
             "✅ Username received.",
             reply_markup=confirm_keyboard(),
         )
 
+        return
 
-@dp.message(RunScriptState.waiting_id)
-async def id_input(message: Message, state: FSMContext):
-    await state.update_data(user_id=message.text)
+    # =========================
+    # BOTS
+    # =========================
+    if choice == "3":
 
-    await state.set_state(RunScriptState.waiting_chat)
+        await message.answer(
+            "✅ Bot username received.",
+            reply_markup=confirm_keyboard(),
+        )
+
+        return
+
+    # =========================
+    # ACCOUNTS
+    # =========================
+    await state.set_state(RunScriptState.waiting_id)
+
     await message.answer(
-    "💬 Send a link to a chat, channel, or message:"
+        "🆔 Enter Telegram ID:"
     )
 
 
+@dp.message(RunScriptState.waiting_id)
+async def id_input(message: Message, state: FSMContext):
+
+    await state.update_data(user_id=message.text)
+
+    data = await state.get_data()
+
+    reason = data.get("reason")
+
+    # 18 19 20 21
+    if reason in ["18", "19", "20", "21"]:
+
+        await message.answer(
+            "✅ Data received.",
+            reply_markup=confirm_keyboard(),
+        )
+
+        return
+
+    await state.set_state(RunScriptState.waiting_chat)
+
+    await message.answer(
+        "💬 Send chat/message link:"
+    )
+
 @dp.message(RunScriptState.waiting_chat)
 async def chat_input(message: Message, state: FSMContext):
+
     await state.update_data(chat=message.text)
 
+    data = await state.get_data()
+
+    choice = data.get("choice")
+
+    # =========================
+    # CHANNELS
+    # =========================
+    if choice == "2":
+
+        await state.set_state(RunScriptState.waiting_violation)
+
+        await message.answer(
+            "⚠️ Send violation link:"
+        )
+
+        return
+
+    # =========================
+    # CHATS
+    # =========================
+    if choice == "4":
+
+        reason = data.get("reason")
+
+        # chat option 6
+        if reason == "6":
+
+            await state.set_state(RunScriptState.waiting_violation)
+
+            await message.answer(
+                "⚠️ Send violation link:"
+            )
+
+            return
+
+        await message.answer(
+            "✅ Data received.",
+            reply_markup=confirm_keyboard(),
+        )
+
+        return
+
+    # =========================
+    # ACCOUNTS
+    # =========================
     await state.set_state(RunScriptState.waiting_violation)
+
     await message.answer(
-    "⚠️ Send a link to material or a message related to the complaint:"
+        "⚠️ Send violation link:"
     )
 
 
