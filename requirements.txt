@@ -6,3 +6,11 @@ pyfiglet
 colored
 pystyle
 colorama
+
+httpx
+prettytable
+geopy
+instagram_private_api
+hikerapi
+gnureadline
+pyreadline3
