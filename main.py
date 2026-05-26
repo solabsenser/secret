@@ -221,13 +221,10 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             "Type 'list'",
             "Type 'FILE'",
             "Type 'JSON'",
-            "Run a command",
-            "Searching for target",
-            "HikerAPI",
+            "Run a command:",
             "_____",
             "\\_____",
-            "/____",
-            "+---",
+            "/_____/",
             "@@",
         ]
 
@@ -239,17 +236,37 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             if not line:
                 continue
 
-            # ASCII мусор
-            if len(line) > 120:
-                continue
-
             # Help/banner мусор
             if any(word in line for word in skip_words):
                 continue
 
-            # Убираем таблицы
-            if line.startswith("|"):
+            # Убираем ASCII баннер
+            if (
+                "██" in line
+                or "══" in line
+                or "___" in line
+                or "\\__" in line
+            ):
                 continue
+
+            # Красивый вывод followers/followings
+            if line.startswith("|"):
+
+                parts = [x.strip() for x in line.split("|") if x.strip()]
+
+                if len(parts) >= 3:
+
+                    user_id = parts[0]
+                    username = parts[1]
+                    fullname = parts[2]
+
+                    line = (
+                        f"• @{username}"
+                        f" ({fullname})"
+                    )
+
+                else:
+                    continue
 
             # Убираем линии таблиц
             if line.startswith("+"):
