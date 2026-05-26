@@ -531,12 +531,27 @@ async def menu_selected(callback: CallbackQuery, state: FSMContext):
 
 @dp.message(RunScriptState.waiting_username)
 async def username_input(message: Message, state: FSMContext):
+
     await state.update_data(username=message.text)
 
-    await state.set_state(RunScriptState.waiting_id)
-    await message.answer(
-    "🆔 Specify the user's Telegram ID:"
-    )
+    data = await state.get_data()
+    script = SCRIPTS[data["script_key"]]
+
+    # Если нужен ID
+    if script.get("needs_id"):
+
+        await state.set_state(RunScriptState.waiting_id)
+
+        await message.answer(
+            "🆔 Specify the user's Telegram ID:"
+        )
+
+    else:
+
+        await message.answer(
+            "✅ Username received.",
+            reply_markup=confirm_keyboard(),
+        )
 
 
 @dp.message(RunScriptState.waiting_id)
