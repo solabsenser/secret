@@ -418,6 +418,16 @@ async def script_selected(callback: CallbackQuery, state: FSMContext):
             reply_markup=menu_keyboard()
         )
 
+    # Если нужен username
+    elif script.get("needs_username"):
+
+        await state.set_state(RunScriptState.waiting_username)
+
+        await callback.message.edit_text(
+            f"👤 Selected: {script['name']}\n\n"
+            "Enter Instagram username:"
+        )
+
     else:
         await callback.message.edit_text(
             f"⚡ Selected: {script['name']}\nReady to launch.",
@@ -425,8 +435,7 @@ async def script_selected(callback: CallbackQuery, state: FSMContext):
         )
 
     await callback.answer()
-
-
+    
 # =========================
 # PASSWORD INPUT
 # =========================
