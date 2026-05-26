@@ -17,6 +17,7 @@
 # state appear
 # subs cheker
 # lekso
+# osintgram
 
 import asyncio
 import subprocess
