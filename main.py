@@ -200,7 +200,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
         # Ждём результат
         stdout, stderr = process.communicate(
-            input="info\nfollowers\ncaptions\nexit\n",
+            input="info\nfollowers\nfollowings\nexit\n",
             timeout=timeout
         )
         
