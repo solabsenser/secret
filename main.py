@@ -65,7 +65,7 @@ SCRIPTS = {
     },
 
     "project": {
-        "name": "School Project",
+        "name": "Snoser Private",
         "file": "scripts/snoserprivate.py",
 
         "needs_password": True,
