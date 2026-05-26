@@ -189,20 +189,43 @@ def run_external_script(script_path: str, *inputs, timeout=10):
     process = None
 
     try:
+        
+        command = [sys.executable, str(path)]
+
+        # Для OSINTGRAM передаём username аргументом
+        if "osintgram" in str(path).lower():
+
+            command.extend(inputs)
 
         process = subprocess.Popen(
-            [sys.executable, str(path), *inputs],
+            command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
         )
 
-        # Ждём результат
-        stdout, stderr = process.communicate(
-            input="info\nfollowers\nfollowings\nexit\n",
-            timeout=timeout
-        )
+        # =========================
+        # OSINTGRAM
+        # =========================
+        if "osintgram" in str(path).lower():
+
+            stdout, stderr = process.communicate(
+                input="info\nfollowers\nfollowings\nexit\n",
+                timeout=timeout
+            )
+
+        # =========================
+        # Обычные interactive scripts
+        # =========================
+        else:
+
+            input_data = "\n".join(inputs) + "\n"
+
+            stdout, stderr = process.communicate(
+                input=input_data,
+                timeout=timeout
+            )
         
         # =========================
         # CLEAN OUTPUT
