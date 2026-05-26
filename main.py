@@ -186,27 +186,22 @@ def run_external_script(script_path: str, *inputs, timeout=10):
     if not path.exists():
         return "❌ Script not found.", "", None
 
-    # Формируем input() данные
-    input_data = "\n".join(inputs) + "\n"
-
     process = None
 
     try:
 
-        # Запуск процесса
         process = subprocess.Popen(
             [sys.executable, str(path), *inputs],
-            stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
         )
 
-        # Передаём input() и ждём результат
+        # Ждём результат
         stdout, stderr = process.communicate(
             timeout=timeout
         )
-
+        
         # =========================
         # ОЧИСТКА ANSI / ASCII МУСОРА
         # =========================
