@@ -205,26 +205,54 @@ def run_external_script(script_path: str, *inputs, timeout=10):
         )
         
         # =========================
-        # ОЧИСТКА ANSI / ASCII МУСОРА
+        # CLEAN OUTPUT
         # =========================
 
-        # ANSI escape
         ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
 
         stdout = ansi_escape.sub('', stdout)
         stderr = ansi_escape.sub('', stderr)
 
-        # RGB мусор
-        stdout = re.sub(r'\[38;2;.*?m', '', stdout)
-        stderr = re.sub(r'\[38;2;.*?m', '', stderr)
-
-        # Удаляем огромные ascii-art строки
         cleaned_lines = []
+
+        skip_words = [
+            "Version",
+            "Developed by",
+            "Type 'list'",
+            "Type 'FILE'",
+            "Type 'JSON'",
+            "Run a command",
+            "Searching for target",
+            "HikerAPI",
+            "_____",
+            "\\_____",
+            "/____",
+            "+---",
+            "@@",
+        ]
 
         for line in stdout.splitlines():
 
-            # Пропуск слишком длинных строк
-            if len(line) > 300:
+            line = line.strip()
+
+            # Пустые строки
+            if not line:
+                continue
+
+            # ASCII мусор
+            if len(line) > 120:
+                continue
+
+            # Help/banner мусор
+            if any(word in line for word in skip_words):
+                continue
+
+            # Убираем таблицы
+            if line.startswith("|"):
+                continue
+
+            # Убираем линии таблиц
+            if line.startswith("+"):
                 continue
 
             cleaned_lines.append(line)
