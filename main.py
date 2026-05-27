@@ -8,7 +8,7 @@
 #
 # Установка:
 # pip install aiogram
-#
+# gay
 # Структура:
 # bot.py
 # scripts/
