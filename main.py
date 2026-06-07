@@ -128,18 +128,65 @@ main_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True,
 )
 
-def scripts_inline_keyboard():
+def scripts_inline_keyboard(page=0):
+
+    items_per_page = 5
+
+    scripts_list = list(SCRIPTS.items())
+
+    start = page * items_per_page
+    end = start + items_per_page
+
+    current_scripts = scripts_list[start:end]
+
     buttons = []
-    for key, script in SCRIPTS.items():
+
+    for key, script in current_scripts:
+
         buttons.append(
-            [InlineKeyboardButton(text=f"⚙️ {script['name']}", callback_data=f"script_{key}")]
+            [
+                InlineKeyboardButton(
+                    text=f"⚙️ {script['name']}",
+                    callback_data=f"script_{key}"
+                )
+            ]
         )
 
+    nav_buttons = []
+
+    if page > 0:
+
+        nav_buttons.append(
+            InlineKeyboardButton(
+                text="⬅ Previous",
+                callback_data=f"scripts_page_{page - 1}"
+            )
+        )
+
+    if end < len(scripts_list):
+
+        nav_buttons.append(
+            InlineKeyboardButton(
+                text="Next ➡",
+                callback_data=f"scripts_page_{page + 1}"
+            )
+        )
+
+    if nav_buttons:
+        buttons.append(nav_buttons)
+
     buttons.append(
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel")]
+        [
+            InlineKeyboardButton(
+                text="❌ Cancel",
+                callback_data="cancel"
+            )
+        ]
     )
 
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    return InlineKeyboardMarkup(
+        inline_keyboard=buttons
+    )
 
 
 def confirm_keyboard():
@@ -440,9 +487,24 @@ async def show_scripts(message: Message, state: FSMContext):
     await state.set_state(RunScriptState.choosing_script)
     await message.answer(
         "📌 Choose a script to launch:",
-        reply_markup=scripts_inline_keyboard(),
+        reply_markup=scripts_inline_keyboard(0),
     )
 
+@dp.callback_query(F.data.startswith("scripts_page_"))
+async def scripts_page(callback: CallbackQuery):
+
+    page = int(
+        callback.data.replace(
+            "scripts_page_",
+            ""
+        )
+    )
+
+    await callback.message.edit_reply_markup(
+        reply_markup=scripts_inline_keyboard(page)
+    )
+
+    await callback.answer()
 
 @dp.message(F.text == "ℹ️ Help")
 async def help_handler(message: Message, state: FSMContext):
