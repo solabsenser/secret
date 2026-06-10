@@ -1,5 +1,25 @@
+# bot.py
+# Универсальный Telegram-бот для школьного проекта:
+# - Красивое меню
+# - Reply + Inline кнопки
+# - Выбор подключенного скрипта
+# - Передача параметров (пароль / номер)
+# - Запуск внешнего .py файла через subprocess
+#
+# Установка:
+# pip install aiogram
+# gay
+# Структура:
+# bot.py
+# scripts/
+#   TeleSession.py
+#   another_script.py
+# state appear
+# subs cheker
+# lekso
+# osintgram
+
 import asyncio
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -21,12 +41,6 @@ from subscription import (
     check_subscription,
     subscribe_keyboard
 )
-from cycles import (
-    get_user_cycle_limit,
-    can_use_cycles,
-    increase_cycles,
-    decrease_cycles,
-)
 
 # =========================
 # НАСТРОЙКИ
@@ -46,9 +60,8 @@ SCRIPTS = {
         "needs_password": True,
         "needs_phone": True,
 
-        "timeout": 60,
-        "info": "⏳ Runtime: 60 seconds",
-        "allow_cycles": True,
+        "timeout": 10,
+        "info": "⏳ Runtime: 10 seconds",
     },
 
     "project": {
@@ -66,7 +79,6 @@ SCRIPTS = {
 
         "timeout": 120,
         "info": "⏳ Runtime: 2 minutes",
-        "allow_cycles": True,
     },
 
     "osint": {
@@ -78,7 +90,6 @@ SCRIPTS = {
 
         "timeout": 30,
         "info": "⏳ Runtime: 30 seconds",
-        "allow_cycles": False,
     }
 }
 
@@ -105,8 +116,7 @@ class RunScriptState(StatesGroup):
     waiting_chat = State()
     waiting_violation = State()
     waiting_reason = State()
-    waiting_cycles = State()
-    
+
 # =========================
 # KEYBOARDS
 # =========================
@@ -188,42 +198,7 @@ def confirm_keyboard():
             ]
         ]
     )
-    
-def cycles_keyboard(cycles):
 
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="➖",
-                    callback_data="cycles_minus"
-                ),
-
-                InlineKeyboardButton(
-                    text=f"{cycles}",
-                    callback_data="cycles_info"
-                ),
-
-                InlineKeyboardButton(
-                    text="➕",
-                    callback_data="cycles_plus"
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="✅ Launch",
-                    callback_data="confirm_run"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="❌ Cancel",
-                    callback_data="cancel"
-                )
-            ]
-        ]
-    )
-    
 def reason_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -241,180 +216,16 @@ def reason_keyboard():
             ]
         ]
     )
-
-# ====== CYCLES MENU =======
-async def show_launch_menu(message, state):
-
-    data = await state.get_data()
-
-    script = SCRIPTS[data["script_key"]]
-
-    if script.get("allow_cycles"):
-
-        await state.update_data(cycles=1)
-
-        await message.answer(
-            "🔄 Configure cycles:",
-            reply_markup=cycles_keyboard(1)
-        )
-
-    else:
-
-        await message.answer(
-            "🚀 Ready to launch.",
-            reply_markup=confirm_keyboard()
-        )
-        
+    
 # =========================
 # HELPERS
 # =========================
-def clean_script_output(output: str) -> str:
-
-    if not output:
-        return ""
-
-    ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
-    output = ansi_escape.sub('', output)
-
-    prompt_phrases = [
-        "Введи текстовый пароль для запуска программы:",
-        "Введи пароль для запуска программы:",
-        "Введите номер телефона:",
-        "Enter password:",
-        "Enter phone number:",
-    ]
-
-    for phrase in prompt_phrases:
-        output = output.replace(phrase, "")
-
-    cleaned_lines = []
-
-    skip_words = [
-        "Version",
-        "Developed by",
-        "Type 'list'",
-        "Type 'FILE'",
-        "Type 'JSON'",
-        "Run a command:",
-        "HikerAPI",
-        "[HD PROFILE PIC]",
-        "Username (Full Name)",
-        "default is disabled",
-        "Пароль верен",
-        "Пароль не верен",
-        "Запускаю работу программы",
-        "Уточни его у создателей",
-        "TeleSession",
-        "_____",
-        "\\_____",
-        "/_____/",
-        "@@",
-    ]
-
-    ascii_fragments = (
-        "██",
-        "══",
-        "___",
-        "\\__",
-        "|_",
-        " _ ",
-        "/ _",
-        "\\___",
-    )
-
-    for raw_line in output.splitlines():
-
-        line = raw_line.strip()
-
-        if not line:
-            continue
-
-        if any(word in line for word in skip_words):
-            continue
-
-        if any(fragment in line for fragment in ascii_fragments):
-            continue
-
-        if line.startswith("Type 'FILE") or line.startswith("Type 'JSON"):
-            continue
-
-        if line.startswith("|"):
-
-            parts = [x.strip() for x in line.split("|") if x.strip()]
-
-            if len(parts) >= 3:
-
-                username = parts[1]
-                fullname = parts[2]
-
-                if username.lower() == "username":
-                    continue
-
-                if not fullname:
-                    fullname = "No Name"
-
-                line = f"• @{username} ({fullname})"
-
-            else:
-                continue
-
-        if line.startswith("+"):
-            continue
-
-        if "http" in line and len(line) > 80:
-            continue
-
-        cleaned_lines.append(line)
-
-    return "\n".join(cleaned_lines)
-
-
-def compact_script_output(output: str, max_lines: int = 4, max_chars: int = 500) -> str:
-
-    cleaned_output = clean_script_output(output)
-
-    if not cleaned_output:
-        return ""
-
-    lines = cleaned_output.splitlines()
-    compact_lines = lines[:max_lines]
-    compact_output = "\n".join(compact_lines)
-
-    if len(lines) > max_lines:
-        compact_output += f"\n… and {len(lines) - max_lines} more line(s)"
-
-    if len(compact_output) > max_chars:
-        compact_output = compact_output[:max_chars].rstrip() + "…"
-
-    return compact_output
-
-
-def build_cycles_report(results):
-
-    total_cycles = len(results)
-    successful_cycles = sum(
-        1 for status, _, _ in results
-        if status.startswith("✅")
-    )
-
-    first_error = next(
-        (status for status, _, _ in results if status.startswith("❌")),
-        None
-    )
-
-    if first_error:
-        status_text = first_error
-    else:
-        status_text = results[0][0] if results else "✅ Done."
-
-    return f"{status_text} 🔄 Cycles: {successful_cycles}/{total_cycles}"
-
-
 def run_external_script(script_path: str, *inputs, timeout=10):
 
     from pathlib import Path
     import subprocess
     import sys
+    import re
 
     path = Path(script_path)
 
@@ -425,11 +236,12 @@ def run_external_script(script_path: str, *inputs, timeout=10):
     process = None
 
     try:
-
+        
         command = [sys.executable, str(path)]
 
         # Для OSINTGRAM передаём username аргументом
         if "osintgram" in str(path).lower():
+
             command.extend(inputs)
 
         process = subprocess.Popen(
@@ -461,85 +273,132 @@ def run_external_script(script_path: str, *inputs, timeout=10):
                 input=input_data,
                 timeout=timeout
             )
-
+        
         # =========================
         # CLEAN OUTPUT
         # =========================
 
-        stdout = clean_script_output(stdout)
-        stderr = clean_script_output(stderr)
+        ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
+
+        stdout = ansi_escape.sub('', stdout)
+        stderr = ansi_escape.sub('', stderr)
+
+        cleaned_lines = []
+
+        skip_words = [
+            "Version",
+            "Developed by",
+            "Type 'list'",
+            "Type 'FILE'",
+            "Type 'JSON'",
+            "Run a command:",
+            "HikerAPI",
+            "[HD PROFILE PIC]",
+            "Username (Full Name)",
+            "default is disabled",
+            "_____",
+            "\\_____",
+            "/_____/",
+            "@@",
+        ]
+
+        for line in stdout.splitlines():
+
+            line = line.strip()
+
+            # Пустые строки
+            if not line:
+                continue
+
+            # FILE / JSON help
+            if line.startswith("Type 'FILE"):
+                continue
+
+            if line.startswith("Type 'JSON"):
+                continue
+
+            # Help/banner мусор
+            if any(word in line for word in skip_words):
+                continue
+
+            # ASCII мусор
+            if (
+                "██" in line
+                or "══" in line
+                or "___" in line
+                or "\\__" in line
+            ):
+                continue
+
+            # Красивый вывод followers/followings
+            if line.startswith("|"):
+
+                parts = [x.strip() for x in line.split("|") if x.strip()]
+
+                if len(parts) >= 3:
+
+                    username = parts[1]
+                    fullname = parts[2]
+
+                    # Пропускаем заголовок таблицы
+                    if username.lower() == "username":
+                        continue
+
+                    if not fullname:
+                        fullname = "No Name"
+
+                    line = f"• @{username} ({fullname})"
+
+                else:
+                    continue
+
+            # Убираем линии таблиц
+            if line.startswith("+"):
+                continue
+
+            # Убираем огромные ссылки
+            if "http" in line and len(line) > 80:
+                continue
+
+            cleaned_lines.append(line)
+
+        stdout = "\n".join(cleaned_lines)
 
         # =========================
-        # RESULT
+        # ОШИБКА
         # =========================
-
-        if process.returncode != 0:
-
-            details = stderr or stdout or f"Process exited with code {process.returncode}."
-
-            return (
-                f"❌ Failed (exit code {process.returncode}).",
-                details[:3000],
-                process
-            )
-        # =========================
-        # RESULT
-        # =========================
-
-        if process.returncode != 0:
-
-            details = stderr or stdout or f"Process exited with code {process.returncode}."
-
-            return (
-                f"❌ Script failed with exit code {process.returncode}.",
-                details[:3000],
-                process
-            )
-
         if stderr:
 
             return (
-                "⚠️ Finished with warnings.",
-                "⚠️ Script finished with stderr output.",
+                "❌ Script finished with an error.",
                 stderr[:3000],
                 process
             )
 
+        # =========================
+        # УСПЕХ
+        # =========================
         return (
-            "✅ Done.",
+            "✅ Script executed successfully.",
             stdout[:3000],
             process
         )
 
-    except subprocess.TimeoutExpired as e:
+    except subprocess.TimeoutExpired:
 
-        if process and process.poll() is None:
+        # Если завис или бесконечный цикл
+        if process:
             process.kill()
-            process.wait()
-
-        partial_stdout = e.stdout or ""
-        partial_stderr = e.stderr or ""
-
-        if isinstance(partial_stdout, bytes):
-            partial_stdout = partial_stdout.decode(errors="replace")
-
-        if isinstance(partial_stderr, bytes):
-            partial_stderr = partial_stderr.decode(errors="replace")
-
-        timeout_details = partial_stdout[:2500]
-
-        if partial_stderr:
-            timeout_details += ("\n" if timeout_details else "") + partial_stderr[:500]
 
         return (
             f"✅ Script ran successfully for {timeout} sec and was terminated.",
-            f"⚠️ Script reached the {timeout} sec timeout and was terminated.",
-            timeout_details,
+            "",
             process
         )
 
     except Exception as e:
 
+        # Ошибка запуска
         if process and process.poll() is None:
             process.kill()
 
@@ -551,25 +410,9 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
     finally:
 
-        if process:
-
-            try:
-                if process.stdin:
-                    process.stdin.close()
-            except:
-                pass
-
-            try:
-                if process.stdout:
-                    process.stdout.close()
-            except:
-                pass
-
-            try:
-                if process.stderr:
-                    process.stderr.close()
-            except:
-                pass
+        # Гарантированное завершение
+        if process and process.poll() is None:
+            process.kill()
             
 # =========================
 # START
@@ -781,7 +624,6 @@ async def password_input(message: Message, state: FSMContext):
 # =========================
 @dp.message(RunScriptState.waiting_phone)
 async def phone_input(message: Message, state: FSMContext):
-
     # Очищаем номер от пробелов, +, скобок, тире
     raw_phone = message.text
 
@@ -795,21 +637,15 @@ async def phone_input(message: Message, state: FSMContext):
 
     # Проверка: только цифры
     if not cleaned_phone.isdigit():
-
-        await message.answer(
-            "⚠️ Enter the phone number using digits only (you can include +, the bot will clean it)."
-        )
-
+        await message.answer("⚠️ Enter the phone number using digits only (you can include +, the bot will clean it).")
         return
 
     # Сохраняем уже очищенный номер
     await state.update_data(phone=cleaned_phone)
 
-    await state.update_data(cycles=1)
-
     await message.answer(
-        "🔄 Configure cycles:",
-        reply_markup=cycles_keyboard(1)
+        f"📱 Phone number accepted: {cleaned_phone}\n🚀 Everything is ready!",
+        reply_markup=confirm_keyboard(),
     )
 
 def menu_keyboard():
@@ -1039,77 +875,13 @@ async def reason_selected(callback: CallbackQuery, state: FSMContext):
     # Сохраняем номер причины
     await state.update_data(reason=reason)
 
-    await state.update_data(cycles=1)
-
     await callback.message.edit_text(
         "✅ Reason selected."
     )
 
     await callback.message.answer(
-        "🔄 Configure cycles:",
-        reply_markup=cycles_keyboard(1)
-    )
-
-    await callback.answer()
-
-# ======= CYCLES BUTTON ======
-@dp.callback_query(F.data == "cycles_plus")
-async def cycles_plus(callback: CallbackQuery, state: FSMContext):
-
-    data = await state.get_data()
-
-    cycles = data.get("cycles", 1)
-
-    limit = get_user_cycle_limit(
-        callback.from_user.id
-    )
-
-    new_cycles = increase_cycles(
-        cycles,
-        limit
-    )
-
-    if new_cycles == cycles:
-
-        await callback.answer(
-            f"⛔ Limit: {limit}",
-            show_alert=True
-        )
-
-        return
-
-    await state.update_data(
-        cycles=new_cycles
-    )
-
-    await callback.message.edit_reply_markup(
-        reply_markup=cycles_keyboard(
-            new_cycles
-        )
-    )
-
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "cycles_minus")
-async def cycles_minus(callback: CallbackQuery, state: FSMContext):
-
-    data = await state.get_data()
-
-    cycles = data.get("cycles", 1)
-
-    new_cycles = decrease_cycles(
-        cycles
-    )
-
-    await state.update_data(
-        cycles=new_cycles
-    )
-
-    await callback.message.edit_reply_markup(
-        reply_markup=cycles_keyboard(
-            new_cycles
-        )
+        "🚀 Everything is ready to launch.",
+        reply_markup=confirm_keyboard()
     )
 
     await callback.answer()
@@ -1130,42 +902,22 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
         )
         return
 
-    # Отвечаем Telegram сразу
-    await callback.answer()
+    # Блокируем новые запуски
+    ACTIVE_PROCESS = True
 
     data = await state.get_data()
 
     # Если state уже очищен
     if "script_key" not in data:
 
-        await callback.message.answer(
-            "⚠️ Session expired. Please start again."
+        await callback.answer(
+            "⚠️ Session expired. Please start again.",
+            show_alert=True
         )
 
         return
-
-    # Блокируем новые запуски
-    ACTIVE_PROCESS = True
 
     script = SCRIPTS[data["script_key"]]
-
-    try:
-        cycles = int(data.get("cycles", 1))
-    except (TypeError, ValueError):
-        cycles = 1
-
-    cycles = max(cycles, 1)
-
-    if not script.get("allow_cycles"):
-        cycles = 1
-
-    if not can_use_cycles(callback.from_user.id, cycles):
-        limit = get_user_cycle_limit(callback.from_user.id)
-        await callback.message.answer(
-            f"⛔ Cycle limit exceeded. Your limit: {limit}."
-        )
-        ACTIVE_PROCESS = False
-        return
 
     # Собираем input()
     inputs = []
@@ -1196,28 +948,30 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
     status_message = await callback.message.edit_text(
         f"⏳ Script started.\n"
-        f"🔄 Cycles: {cycles}\n"
         f"⏱ Auto-stop in {script['timeout']} sec."
     )
 
     try:
 
-        tasks = []
+        stdout, stderr, process = await asyncio.to_thread(
+            run_external_script,
+            script["file"],
+            *inputs,
+            timeout=script["timeout"]
+        )
 
-        for _ in range(cycles):
+        text = stdout if stdout else "✅ Script finished."
 
-            tasks.append(
-                asyncio.to_thread(
-                    run_external_script,
-                    script["file"],
-                    *inputs,
-                    timeout=script["timeout"]
-                )
-            )
+        # Ограничиваем длину ошибок
+        if stderr:
 
-        results = await asyncio.gather(*tasks)
+            short_error = stderr[:3500]
 
-        text = build_cycles_report(results)
+            text += f"\n\n⚠️ {short_error}"
+
+    # Если ошибка была длинной
+            if len(stderr) > 3500:
+                text += "\n\n... error truncated ..."
 
         await status_message.edit_text(
             text,
@@ -1231,11 +985,11 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
         )
 
     finally:
-
         # Разрешаем запуск снова
         ACTIVE_PROCESS = False
 
     await state.clear()
+    await callback.answer()
     
 # =========================
 # CANCEL
