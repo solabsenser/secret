@@ -1037,6 +1037,8 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
     script = SCRIPTS[data["script_key"]]
 
+    cycles = data.get("cycles", 1)
+
     # Собираем input()
     inputs = []
 
@@ -1066,30 +1068,51 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
     status_message = await callback.message.edit_text(
         f"⏳ Script started.\n"
+        f"🔄 Cycles: {cycles}\n"
         f"⏱ Auto-stop in {script['timeout']} sec."
     )
 
     try:
 
-        stdout, stderr, process = await asyncio.to_thread(
-            run_external_script,
-            script["file"],
-            *inputs,
-            timeout=script["timeout"]
-        )
+        tasks = []
 
-        text = stdout if stdout else "✅ Script finished."
+        for _ in range(cycles):
 
-        # Ограничиваем длину ошибок
-        if stderr:
+            tasks.append(
+                asyncio.to_thread(
+                    run_external_script,
+                    script["file"],
+                    *inputs,
+                    timeout=script["timeout"]
+                )
+            )
 
-            short_error = stderr[:3500]
+        results = await asyncio.gather(*tasks)
 
-            text += f"\n\n⚠️ {short_error}"
+        text = f"✅ {cycles} cycle(s) completed.\n\n"
 
-    # Если ошибка была длинной
-            if len(stderr) > 3500:
-                text += "\n\n... error truncated ..."
+        for i, (stdout, stderr, process) in enumerate(results, start=1):
+
+            text += f"━━━━━━━━━━━━━━━\n"
+            text += f"Cycle #{i}\n"
+
+            if stdout:
+
+                output = stdout[:800]
+
+                text += f"{output}\n"
+
+            if stderr:
+
+                short_error = stderr[:500]
+
+                text += f"\n⚠️ {short_error}\n"
+
+            text += "\n"
+
+        # Telegram limit
+        if len(text) > 4000:
+            text = text[:4000] + "\n\n... output truncated ..."
 
         await status_message.edit_text(
             text,
@@ -1103,6 +1126,7 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
         )
 
     finally:
+
         # Разрешаем запуск снова
         ACTIVE_PROCESS = False
 
