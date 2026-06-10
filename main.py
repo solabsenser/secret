@@ -23,6 +23,8 @@ from subscription import (
 from cycles import (
     get_user_cycle_limit,
     can_use_cycles,
+    increase_cycles,
+    decrease_cycles,
 )
 
 # =========================
