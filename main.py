@@ -1,24 +1,3 @@
-# bot.py
-# Универсальный Telegram-бот для школьного проекта:
-# - Красивое меню
-# - Reply + Inline кнопки
-# - Выбор подключенного скрипта
-# - Передача параметров (пароль / номер)
-# - Запуск внешнего .py файла через subprocess
-#
-# Установка:
-# pip install aiogram
-# gay
-# Структура:
-# bot.py
-# scripts/
-#   TeleSession.py
-#   another_script.py
-# state appear
-# subs cheker
-# lekso
-# osintgram
-
 import asyncio
 import subprocess
 import sys
@@ -40,6 +19,10 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from subscription import (
     check_subscription,
     subscribe_keyboard
+)
+from cycles import (
+    get_user_cycle_limit,
+    can_use_cycles,
 )
 
 # =========================
@@ -116,7 +99,8 @@ class RunScriptState(StatesGroup):
     waiting_chat = State()
     waiting_violation = State()
     waiting_reason = State()
-
+    waiting_cycles = State()
+    
 # =========================
 # KEYBOARDS
 # =========================
@@ -198,7 +182,42 @@ def confirm_keyboard():
             ]
         ]
     )
+    
+def cycles_keyboard(cycles):
 
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➖",
+                    callback_data="cycles_minus"
+                ),
+
+                InlineKeyboardButton(
+                    text=f"{cycles}",
+                    callback_data="cycles_info"
+                ),
+
+                InlineKeyboardButton(
+                    text="➕",
+                    callback_data="cycles_plus"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✅ Launch",
+                    callback_data="confirm_run"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ Cancel",
+                    callback_data="cancel"
+                )
+            ]
+        ]
+    )
+    
 def reason_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
