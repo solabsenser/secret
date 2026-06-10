@@ -283,12 +283,11 @@ def run_external_script(script_path: str, *inputs, timeout=10):
     process = None
 
     try:
-        
+
         command = [sys.executable, str(path)]
 
         # Для OSINTGRAM передаём username аргументом
         if "osintgram" in str(path).lower():
-
             command.extend(inputs)
 
         process = subprocess.Popen(
@@ -320,7 +319,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
                 input=input_data,
                 timeout=timeout
             )
-        
+
         # =========================
         # CLEAN OUTPUT
         # =========================
@@ -353,22 +352,18 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
             line = line.strip()
 
-            # Пустые строки
             if not line:
                 continue
 
-            # FILE / JSON help
             if line.startswith("Type 'FILE"):
                 continue
 
             if line.startswith("Type 'JSON"):
                 continue
 
-            # Help/banner мусор
             if any(word in line for word in skip_words):
                 continue
 
-            # ASCII мусор
             if (
                 "██" in line
                 or "══" in line
@@ -377,7 +372,6 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             ):
                 continue
 
-            # Красивый вывод followers/followings
             if line.startswith("|"):
 
                 parts = [x.strip() for x in line.split("|") if x.strip()]
@@ -387,7 +381,6 @@ def run_external_script(script_path: str, *inputs, timeout=10):
                     username = parts[1]
                     fullname = parts[2]
 
-                    # Пропускаем заголовок таблицы
                     if username.lower() == "username":
                         continue
 
@@ -399,11 +392,9 @@ def run_external_script(script_path: str, *inputs, timeout=10):
                 else:
                     continue
 
-            # Убираем линии таблиц
             if line.startswith("+"):
                 continue
 
-            # Убираем огромные ссылки
             if "http" in line and len(line) > 80:
                 continue
 
@@ -412,8 +403,9 @@ def run_external_script(script_path: str, *inputs, timeout=10):
         stdout = "\n".join(cleaned_lines)
 
         # =========================
-        # ОШИБКА
+        # ERROR
         # =========================
+
         if stderr:
 
             return (
@@ -423,8 +415,9 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             )
 
         # =========================
-        # УСПЕХ
+        # SUCCESS
         # =========================
+
         return (
             "✅ Script executed successfully.",
             stdout[:3000],
@@ -433,8 +426,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
     except subprocess.TimeoutExpired:
 
-        # Если завис или бесконечный цикл
-        if process:
+        if process and process.poll() is None:
             process.kill()
 
         return (
@@ -445,7 +437,6 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
     except Exception as e:
 
-        # Ошибка запуска
         if process and process.poll() is None:
             process.kill()
 
@@ -457,9 +448,25 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
     finally:
 
-        # Гарантированное завершение
-        if process and process.poll() is None:
-            process.kill()
+        if process:
+
+            try:
+                if process.stdin:
+                    process.stdin.close()
+            except:
+                pass
+
+            try:
+                if process.stdout:
+                    process.stdout.close()
+            except:
+                pass
+
+            try:
+                if process.stderr:
+                    process.stderr.close()
+            except:
+                pass
             
 # =========================
 # START
