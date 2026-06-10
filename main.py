@@ -1017,8 +1017,6 @@ async def cycles_minus(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "confirm_run")
 async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
-    print("CONFIRM_RUN")
-
     global ACTIVE_PROCESS
 
     # Если уже выполняется процесс
@@ -1029,14 +1027,16 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
         )
         return
 
+    # Отвечаем Telegram сразу
+    await callback.answer()
+
     data = await state.get_data()
 
     # Если state уже очищен
     if "script_key" not in data:
 
-        await callback.answer(
-            "⚠️ Session expired. Please start again.",
-            show_alert=True
+        await callback.message.answer(
+            "⚠️ Session expired. Please start again."
         )
 
         return
@@ -1140,7 +1140,6 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
         ACTIVE_PROCESS = False
 
     await state.clear()
-    await callback.answer()
     
 # =========================
 # CANCEL
