@@ -45,6 +45,7 @@ SCRIPTS = {
 
         "timeout": 10,
         "info": "⏳ Runtime: 10 seconds",
+        "allow_cycles": True,
     },
 
     "project": {
@@ -62,6 +63,7 @@ SCRIPTS = {
 
         "timeout": 120,
         "info": "⏳ Runtime: 2 minutes",
+        "allow_cycles": True,
     },
 
     "osint": {
@@ -73,6 +75,7 @@ SCRIPTS = {
 
         "timeout": 30,
         "info": "⏳ Runtime: 30 seconds",
+        "allow_cycles": False,
     }
 }
 
@@ -235,7 +238,30 @@ def reason_keyboard():
             ]
         ]
     )
-    
+
+# ====== CYCLES MENU =======
+ async def show_launch_menu(message, state):
+
+    data = await state.get_data()
+
+    script = SCRIPTS[data["script_key"]]
+
+    if script.get("allow_cycles"):
+
+        await state.update_data(cycles=1)
+
+        await message.answer(
+            "🔄 Configure cycles:",
+            reply_markup=cycles_keyboard(1)
+        )
+
+    else:
+
+        await message.answer(
+            "🚀 Ready to launch.",
+            reply_markup=confirm_keyboard()
+        )   
+        
 # =========================
 # HELPERS
 # =========================
@@ -643,6 +669,7 @@ async def password_input(message: Message, state: FSMContext):
 # =========================
 @dp.message(RunScriptState.waiting_phone)
 async def phone_input(message: Message, state: FSMContext):
+
     # Очищаем номер от пробелов, +, скобок, тире
     raw_phone = message.text
 
@@ -656,15 +683,21 @@ async def phone_input(message: Message, state: FSMContext):
 
     # Проверка: только цифры
     if not cleaned_phone.isdigit():
-        await message.answer("⚠️ Enter the phone number using digits only (you can include +, the bot will clean it).")
+
+        await message.answer(
+            "⚠️ Enter the phone number using digits only (you can include +, the bot will clean it)."
+        )
+
         return
 
     # Сохраняем уже очищенный номер
     await state.update_data(phone=cleaned_phone)
 
+    await state.update_data(cycles=1)
+
     await message.answer(
-        f"📱 Phone number accepted: {cleaned_phone}\n🚀 Everything is ready!",
-        reply_markup=confirm_keyboard(),
+        "🔄 Configure cycles:",
+        reply_markup=cycles_keyboard(1)
     )
 
 def menu_keyboard():
@@ -894,13 +927,15 @@ async def reason_selected(callback: CallbackQuery, state: FSMContext):
     # Сохраняем номер причины
     await state.update_data(reason=reason)
 
+    await state.update_data(cycles=1)
+
     await callback.message.edit_text(
         "✅ Reason selected."
     )
 
     await callback.message.answer(
-        "🚀 Everything is ready to launch.",
-        reply_markup=confirm_keyboard()
+        "🔄 Configure cycles:",
+        reply_markup=cycles_keyboard(1)
     )
 
     await callback.answer()
