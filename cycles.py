@@ -4,6 +4,7 @@
 
 ADMINS = {
     796190250,
+    7027281827,
 }
 
 PREMIUM_USERS = {
