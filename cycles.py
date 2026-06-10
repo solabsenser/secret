@@ -39,3 +39,23 @@ def get_user_cycle_limit(user_id: int):
 def can_use_cycles(user_id: int, cycles: int):
 
     return cycles <= get_user_cycle_limit(user_id)
+
+# =========================
+# CYCLE CONTROL
+# =========================
+
+def increase_cycles(current: int, limit: int):
+
+    if current >= limit:
+        return current
+
+    return current + 1
+
+
+def decrease_cycles(current: int):
+
+    if current <= 1:
+        return 1
+
+    return current - 1
+    
