@@ -47,7 +47,7 @@ SCRIPTS = {
 
         "timeout": 10,
         "info": "⏳ Runtime: 10 seconds",
-        "allow_cycles": True,
+        "allow_cycles": False,
     },
 
     "project": {
