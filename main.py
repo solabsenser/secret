@@ -240,7 +240,7 @@ def reason_keyboard():
     )
 
 # ====== CYCLES MENU =======
- async def show_launch_menu(message, state):
+async def show_launch_menu(message, state):
 
     data = await state.get_data()
 
@@ -260,7 +260,7 @@ def reason_keyboard():
         await message.answer(
             "🚀 Ready to launch.",
             reply_markup=confirm_keyboard()
-        )   
+        )
         
 # =========================
 # HELPERS
