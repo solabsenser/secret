@@ -939,6 +939,68 @@ async def reason_selected(callback: CallbackQuery, state: FSMContext):
     )
 
     await callback.answer()
+
+# ======= CYCLES BUTTON ======
+@dp.callback_query(F.data == "cycles_plus")
+async def cycles_plus(callback: CallbackQuery, state: FSMContext):
+
+    data = await state.get_data()
+
+    cycles = data.get("cycles", 1)
+
+    limit = get_user_cycle_limit(
+        callback.from_user.id
+    )
+
+    new_cycles = increase_cycles(
+        cycles,
+        limit
+    )
+
+    if new_cycles == cycles:
+
+        await callback.answer(
+            f"⛔ Limit: {limit}",
+            show_alert=True
+        )
+
+        return
+
+    await state.update_data(
+        cycles=new_cycles
+    )
+
+    await callback.message.edit_reply_markup(
+        reply_markup=cycles_keyboard(
+            new_cycles
+        )
+    )
+
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "cycles_minus")
+async def cycles_minus(callback: CallbackQuery, state: FSMContext):
+
+    data = await state.get_data()
+
+    cycles = data.get("cycles", 1)
+
+    new_cycles = decrease_cycles(
+        cycles
+    )
+
+    await state.update_data(
+        cycles=new_cycles
+    )
+
+    await callback.message.edit_reply_markup(
+        reply_markup=cycles_keyboard(
+            new_cycles
+        )
+    )
+
+    await callback.answer()
     
 # =========================
 # RUN SCRIPT
