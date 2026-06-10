@@ -482,11 +482,25 @@ def run_external_script(script_path: str, *inputs, timeout=10):
                 details[:3000],
                 process
             )
+        # =========================
+        # RESULT
+        # =========================
+
+        if process.returncode != 0:
+
+            details = stderr or stdout or f"Process exited with code {process.returncode}."
+
+            return (
+                f"❌ Script failed with exit code {process.returncode}.",
+                details[:3000],
+                process
+            )
 
         if stderr:
 
             return (
                 "⚠️ Finished with warnings.",
+                "⚠️ Script finished with stderr output.",
                 stderr[:3000],
                 process
             )
@@ -519,6 +533,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
 
         return (
             f"✅ Script ran successfully for {timeout} sec and was terminated.",
+            f"⚠️ Script reached the {timeout} sec timeout and was terminated.",
             timeout_details,
             process
         )
