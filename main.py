@@ -1,4 +1,5 @@
 import asyncio
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -267,12 +268,153 @@ async def show_launch_menu(message, state):
 # =========================
 # HELPERS
 # =========================
+def clean_script_output(output: str) -> str:
+
+    if not output:
+        return ""
+
+    ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
+    output = ansi_escape.sub('', output)
+
+    prompt_phrases = [
+        "Введи текстовый пароль для запуска программы:",
+        "Введи пароль для запуска программы:",
+        "Введите номер телефона:",
+        "Enter password:",
+        "Enter phone number:",
+    ]
+
+    for phrase in prompt_phrases:
+        output = output.replace(phrase, "")
+
+    cleaned_lines = []
+
+    skip_words = [
+        "Version",
+        "Developed by",
+        "Type 'list'",
+        "Type 'FILE'",
+        "Type 'JSON'",
+        "Run a command:",
+        "HikerAPI",
+        "[HD PROFILE PIC]",
+        "Username (Full Name)",
+        "default is disabled",
+        "Пароль верен",
+        "Пароль не верен",
+        "Запускаю работу программы",
+        "Уточни его у создателей",
+        "TeleSession",
+        "_____",
+        "\\_____",
+        "/_____/",
+        "@@",
+    ]
+
+    ascii_fragments = (
+        "██",
+        "══",
+        "___",
+        "\\__",
+        "|_",
+        " _ ",
+        "/ _",
+        "\\___",
+    )
+
+    for raw_line in output.splitlines():
+
+        line = raw_line.strip()
+
+        if not line:
+            continue
+
+        if any(word in line for word in skip_words):
+            continue
+
+        if any(fragment in line for fragment in ascii_fragments):
+            continue
+
+        if line.startswith("Type 'FILE") or line.startswith("Type 'JSON"):
+            continue
+
+        if line.startswith("|"):
+
+            parts = [x.strip() for x in line.split("|") if x.strip()]
+
+            if len(parts) >= 3:
+
+                username = parts[1]
+                fullname = parts[2]
+
+                if username.lower() == "username":
+                    continue
+
+                if not fullname:
+                    fullname = "No Name"
+
+                line = f"• @{username} ({fullname})"
+
+            else:
+                continue
+
+        if line.startswith("+"):
+            continue
+
+        if "http" in line and len(line) > 80:
+            continue
+
+        cleaned_lines.append(line)
+
+    return "\n".join(cleaned_lines)
+
+
+def compact_script_output(output: str, max_lines: int = 4, max_chars: int = 500) -> str:
+
+    cleaned_output = clean_script_output(output)
+
+    if not cleaned_output:
+        return ""
+
+    lines = cleaned_output.splitlines()
+    compact_lines = lines[:max_lines]
+    compact_output = "\n".join(compact_lines)
+
+    if len(lines) > max_lines:
+        compact_output += f"\n… and {len(lines) - max_lines} more line(s)"
+
+    if len(compact_output) > max_chars:
+        compact_output = compact_output[:max_chars].rstrip() + "…"
+
+    return compact_output
+
+
+def build_cycles_report(results):
+
+    total_cycles = len(results)
+    successful_cycles = sum(
+        1 for status, _, _ in results
+        if status.startswith("✅")
+    )
+
+    first_error = next(
+        (status for status, _, _ in results if status.startswith("❌")),
+        None
+    )
+
+    if first_error:
+        status_text = first_error
+    else:
+        status_text = results[0][0] if results else "✅ Done."
+
+    return f"{status_text} 🔄 Cycles: {successful_cycles}/{total_cycles}"
+
+
 def run_external_script(script_path: str, *inputs, timeout=10):
 
     from pathlib import Path
     import subprocess
     import sys
-    import re
 
     path = Path(script_path)
 
@@ -324,84 +466,22 @@ def run_external_script(script_path: str, *inputs, timeout=10):
         # CLEAN OUTPUT
         # =========================
 
-        ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
+        stdout = clean_script_output(stdout)
+        stderr = clean_script_output(stderr)
 
-        stdout = ansi_escape.sub('', stdout)
-        stderr = ansi_escape.sub('', stderr)
+        # =========================
+        # RESULT
+        # =========================
 
-        cleaned_lines = []
+        if process.returncode != 0:
 
-        skip_words = [
-            "Version",
-            "Developed by",
-            "Type 'list'",
-            "Type 'FILE'",
-            "Type 'JSON'",
-            "Run a command:",
-            "HikerAPI",
-            "[HD PROFILE PIC]",
-            "Username (Full Name)",
-            "default is disabled",
-            "_____",
-            "\\_____",
-            "/_____/",
-            "@@",
-        ]
+            details = stderr or stdout or f"Process exited with code {process.returncode}."
 
-        for line in stdout.splitlines():
-
-            line = line.strip()
-
-            if not line:
-                continue
-
-            if line.startswith("Type 'FILE"):
-                continue
-
-            if line.startswith("Type 'JSON"):
-                continue
-
-            if any(word in line for word in skip_words):
-                continue
-
-            if (
-                "██" in line
-                or "══" in line
-                or "___" in line
-                or "\\__" in line
-            ):
-                continue
-
-            if line.startswith("|"):
-
-                parts = [x.strip() for x in line.split("|") if x.strip()]
-
-                if len(parts) >= 3:
-
-                    username = parts[1]
-                    fullname = parts[2]
-
-                    if username.lower() == "username":
-                        continue
-
-                    if not fullname:
-                        fullname = "No Name"
-
-                    line = f"• @{username} ({fullname})"
-
-                else:
-                    continue
-
-            if line.startswith("+"):
-                continue
-
-            if "http" in line and len(line) > 80:
-                continue
-
-            cleaned_lines.append(line)
-
-        stdout = "\n".join(cleaned_lines)
-
+            return (
+                f"❌ Failed (exit code {process.returncode}).",
+                details[:3000],
+                process
+            )
         # =========================
         # RESULT
         # =========================
@@ -419,13 +499,14 @@ def run_external_script(script_path: str, *inputs, timeout=10):
         if stderr:
 
             return (
+                "⚠️ Finished with warnings.",
                 "⚠️ Script finished with stderr output.",
                 stderr[:3000],
                 process
             )
 
         return (
-            "✅ Script executed successfully.",
+            "✅ Done.",
             stdout[:3000],
             process
         )
@@ -451,6 +532,7 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             timeout_details += ("\n" if timeout_details else "") + partial_stderr[:500]
 
         return (
+            f"✅ Script ran successfully for {timeout} sec and was terminated.",
             f"⚠️ Script reached the {timeout} sec timeout and was terminated.",
             timeout_details,
             process
@@ -1135,30 +1217,7 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
         results = await asyncio.gather(*tasks)
 
-        text = f"✅ {cycles} cycle(s) completed.\n\n"
-
-        for i, (stdout, stderr, process) in enumerate(results, start=1):
-
-            text += f"━━━━━━━━━━━━━━━\n"
-            text += f"Cycle #{i}\n"
-
-            if stdout:
-                text += f"{stdout[:800]}\n"
-
-            if stderr:
-
-                short_error = stderr[:500]
-
-                text += f"\n⚠️ {short_error}\n"
-
-                if len(stderr) > 500:
-                    text += "\n... error truncated ...\n"
-
-            text += "\n"
-
-        # Telegram limit
-        if len(text) > 4000:
-            text = text[:4000] + "\n\n... output truncated ..."
+        text = build_cycles_report(results)
 
         await status_message.edit_text(
             text,
