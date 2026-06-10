@@ -1010,6 +1010,8 @@ async def cycles_minus(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "confirm_run")
 async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
+    print("CONFIRM_RUN")
+
     global ACTIVE_PROCESS
 
     # Если уже выполняется процесс
