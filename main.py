@@ -45,9 +45,9 @@ SCRIPTS = {
         "needs_password": True,
         "needs_phone": True,
 
-        "timeout": 10,
-        "info": "⏳ Runtime: 10 seconds",
-        "allow_cycles": False,
+        "timeout": 60,
+        "info": "⏳ Runtime: 60 seconds",
+        "allow_cycles": True,
     },
 
     "project": {
