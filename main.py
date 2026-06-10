@@ -403,20 +403,26 @@ def run_external_script(script_path: str, *inputs, timeout=10):
         stdout = "\n".join(cleaned_lines)
 
         # =========================
-        # ERROR
+        # RESULT
         # =========================
+
+        if process.returncode != 0:
+
+            details = stderr or stdout or f"Process exited with code {process.returncode}."
+
+            return (
+                f"❌ Script failed with exit code {process.returncode}.",
+                details[:3000],
+                process
+            )
 
         if stderr:
 
             return (
-                "❌ Script finished with an error.",
+                "⚠️ Script finished with stderr output.",
                 stderr[:3000],
                 process
             )
-
-        # =========================
-        # SUCCESS
-        # =========================
 
         return (
             "✅ Script executed successfully.",
@@ -424,14 +430,29 @@ def run_external_script(script_path: str, *inputs, timeout=10):
             process
         )
 
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as e:
 
         if process and process.poll() is None:
             process.kill()
+            process.wait()
+
+        partial_stdout = e.stdout or ""
+        partial_stderr = e.stderr or ""
+
+        if isinstance(partial_stdout, bytes):
+            partial_stdout = partial_stdout.decode(errors="replace")
+
+        if isinstance(partial_stderr, bytes):
+            partial_stderr = partial_stderr.decode(errors="replace")
+
+        timeout_details = partial_stdout[:2500]
+
+        if partial_stderr:
+            timeout_details += ("\n" if timeout_details else "") + partial_stderr[:500]
 
         return (
-            f"✅ Script ran successfully for {timeout} sec and was terminated.",
-            "",
+            f"⚠️ Script reached the {timeout} sec timeout and was terminated.",
+            timeout_details,
             process
         )
 
@@ -1046,7 +1067,23 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
 
     script = SCRIPTS[data["script_key"]]
 
-    cycles = data.get("cycles", 1)
+    try:
+        cycles = int(data.get("cycles", 1))
+    except (TypeError, ValueError):
+        cycles = 1
+
+    cycles = max(cycles, 1)
+
+    if not script.get("allow_cycles"):
+        cycles = 1
+
+    if not can_use_cycles(callback.from_user.id, cycles):
+        limit = get_user_cycle_limit(callback.from_user.id)
+        await callback.message.answer(
+            f"⛔ Cycle limit exceeded. Your limit: {limit}."
+        )
+        ACTIVE_PROCESS = False
+        return
 
     # Собираем input()
     inputs = []
