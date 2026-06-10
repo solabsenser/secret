@@ -1020,9 +1020,6 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
         )
         return
 
-    # Блокируем новые запуски
-    ACTIVE_PROCESS = True
-
     data = await state.get_data()
 
     # Если state уже очищен
@@ -1034,6 +1031,9 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
         )
 
         return
+
+    # Блокируем новые запуски
+    ACTIVE_PROCESS = True
 
     script = SCRIPTS[data["script_key"]]
 
@@ -1097,16 +1097,16 @@ async def confirm_run(callback: CallbackQuery, state: FSMContext):
             text += f"Cycle #{i}\n"
 
             if stdout:
-
-                output = stdout[:800]
-
-                text += f"{output}\n"
+                text += f"{stdout[:800]}\n"
 
             if stderr:
 
                 short_error = stderr[:500]
 
                 text += f"\n⚠️ {short_error}\n"
+
+                if len(stderr) > 500:
+                    text += "\n... error truncated ...\n"
 
             text += "\n"
 
