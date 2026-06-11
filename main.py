@@ -18,6 +18,7 @@
 # subs cheker
 # lekso
 # osintgram
+# original version
 
 import asyncio
 import subprocess
