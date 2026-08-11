@@ -19,6 +19,7 @@
 # lekso
 # osintgram
 # original version
+# nigga
 
 import asyncio
 import subprocess
